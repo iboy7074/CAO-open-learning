@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>User Registration Portal</title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI', Roboto, Arial, sans-serif; }
+  body { background:linear-gradient(135deg,#0f172a 0%,#1e293b 100%); min-height:100vh; color:#e2e8f0; display:flex; align-items:center; justify-content:center; padding:20px; }
+  .container { width:100%; max-width:520px; }
+  .card { background:#1e293b; border:1px solid #334155; border-radius:16px; padding:28px; box-shadow:0 20px 50px rgba(0,0,0,.45); }
+  .hidden { display:none !important; }
+  h1 { font-size:22px; margin-bottom:4px; color:#38bdf8; }
+  .sub { font-size:13px; color:#94a3b8; margin-bottom:20px; }
+  label { display:block; font-size:13px; font-weight:600; margin:12px 0 5px; color:#cbd5e1; }
+  input, textarea, select { width:100%; padding:10px 12px; border-radius:8px; border:1px solid #334155; background:#0f172a; color:#e2e8f0; font-size:14px; outline:none; }
+  input:focus, textarea:focus, select:focus { border-color:#38bdf8; }
+  textarea { resize:vertical; }
+  .btn { width:100%; padding:12px; border:none; border-radius:8px; font-size:15px; font-weight:700; cursor:pointer; margin-top:18px; background:#38bdf8; color:#0f172a; transition:.2s; }
+  .btn:hover { background:#0ea5e9; }
+  .btn.secondary { background:#334155; color:#e2e8f0; margin-top:8px; }
+  .btn.danger { background:#dc2626; color:#fff; }
+  .btn.small { width:auto; padding:6px 12px; font-size:12px; margin-top:0; }
+  .link { text-align:center; margin-top:14px; font-size:13px; }
+  .link a { color:#38bdf8; cursor:pointer; text-decoration:none; }
+  .msg { padding:10px; border-radius:8px; font-size:13px; margin-top:12px; display:none; }
+  .msg.ok { display:block; background:#052e16; color:#4ade80; border:1px solid #166534; }
+  .msg.err { display:block; background:#450a0a; color:#f87171; border:1px solid #7f1d1d; }
+  .msg.info { display:block; background:#0c4a6e; color:#7dd3fc; border:1px solid #075985; }
+  table { width:100%; border-collapse:collapse; font-size:13px; margin-top:10px; }
+  th, td { padding:8px 6px; border-bottom:1px solid #334155; text-align:left; }
+  th { color:#38bdf8; font-size:12px; text-transform:uppercase; }
+  tr:hover { background:#0f172a; }
+  .badge { display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; background:#0c4a6e; color:#7dd3fc; }
+  .detail-box { background:#0f172a; border:1px solid #334155; border-radius:8px; padding:14px; margin-top:10px; font-size:14px; line-height:1.9; }
+  .detail-box b { color:#38bdf8; }
+  .toolbar { display:flex; gap:8px; flex-wrap:wrap; align-items:center; margin-top:12px; }
+  .two-col { display:grid; grid-template-columns:1fr 1fr; gap:0 12px; }
+  @media (max-width:480px){ .two-col { grid-template-columns:1fr; } }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ================= USER REGISTRATION FORM ================= -->
+  <div class="card" id="regCard">
+    <h1>📝 User Registration</h1>
+    <div class="sub">Fill your details — info is sent to the admin team instantly.</div>
+    <form id="regForm">
+      <div class="two-col">
+        <div><label>1. USER NAME *</label><input type="text" id="fUsername" required></div>
+        <div><label>2. AGE *</label><input type="number" id="fAge" min="1" max="120" required></div>
+      </div>
+      <label>3. COLLEGE *</label><input type="text" id="fCollege" required>
+      <div class="two-col">
+        <div><label>4. PLACE *</label><input type="text" id="fPlace" required></div>
+        <div><label>5. DISTRICT *</label><input type="text" id="fDistrict" required></div>
+      </div>
+      <div class="two-col">
+        <div><label>6. STATE *</label><input type="text" id="fState" required></div>
+        <div><label>7. COUNTRY *</label><input type="text" id="fCountry" required></div>
+      </div>
+      <label>8. ADDRESS *</label><textarea id="fAddress" rows="2" required></textarea>
+      <div class="two-col">
+        <div><label>9. PHONE NO *</label><input type="tel" id="fPhone" pattern="[0-9+ -]{7,15}" required></div>
+        <div><label>10. PASSION *</label><input type="text" id="fPassion" required></div>
+      </div>
+      <button type="submit" class="btn">SUBMIT & SEND TO ADMIN ✔</button>
+      <div id="regStatus" class="msg"></div>
+    </form>
+    <div class="link"><a onclick="showAdminLogin()">🔐 Admin Login (3 admins)</a></div>
+  </div>
+
+  <!-- ================= ADMIN LOGIN ================= -->
+  <div class="card hidden" id="adminLoginCard">
+    <h1>🔐 Admin Login</h1>
+    <div class="sub">Only the 3 registered admins can access the panel.</div>
+    <form id="loginForm">
+      <label>ADMIN USERNAME</label><input type="text" id="aUser" required>
+      <label>PASSWORD</label><input type="password" id="aPass" required>
+      <button type="submit" class="btn">LOGIN</button>
+      <div id="loginStatus" class="msg"></div>
+    </form>
+    <div class="link"><a onclick="showReg()">⬅ Back to Registration</a></div>
+  </div>
+
+  <!-- ================= ADMIN PANEL ================= -->
+  <div class="card hidden" id="adminPanelCard">
+    <div class="toolbar">
+      <h1 style="margin:0;">📋 Admin Panel</h1>
+      <button class="btn small danger" onclick="logout()">Logout</button>
+    </div>
+    <div class="sub" id="adminName"></div>
+    <div class="toolbar">
+      <button class="btn small" onclick="resendAllToTelegram()">📤 Resend All to Telegram</button>
+      <button class="btn small danger" onclick="clearAll()">🗑 Clear All</button>
+    </div>
+    <div id="panelStatus" class="msg"></div>
+    <div id="entriesWrap"></div>
+    <div id="detailView"></div>
+    <div class="link"><a onclick="showReg()">⬅ Back to Registration Page</a></div>
+  </div>
+
+</div>
+
+<script>
+/* =====================================================================
+   CONFIG — இங்க மாத்துங்க!
+   ===================================================================== */
+const BOT_TOKEN = "7643527413:AAHNR6WVtvCsMS-hjTRcZA58EorTyCyGZWA";                       // BotFather-ல இருந்து
+const ADMIN_CHAT_IDS = [                                       // 3 Admin chat IDs
+  "8134902662",
+  "ADMIN2_CHAT_ID",
+  "ADMIN3_CHAT_ID"
+];
+const ADMIN_ACCOUNTS = [                                       // 3 Admin logins
+  { user: "admin1", pass: "Admin@123" },
+  { user: "admin2", pass: "Admin@456" },
+  { user: "admin3", pass: "Admin@789" }
+];
+/* ===================================================================== */
+
+const STORE_KEY = "userRegs";
+let currentAdmin = null;
+
+/* ---------- Telegram Message (English) ---------- */
+function buildMessage(d) {
+  return `🔔 NEW USER REGISTRATION
+━━━━━━━━━━━━━━━━━━━━━━━
+👤 USER NAME  : ${d.username}
+🎂 AGE        : ${d.age}
+🎓 COLLEGE    : ${d.college}
+📍 PLACE      : ${d.place}
+🏢 DISTRICT   : ${d.district}
+🗺 STATE      : ${d.state}
+🌍 COUNTRY    : ${d.country}
+🏠 ADDRESS    : ${d.address}
+📞 PHONE NO   : ${d.phone}
+❤️ PASSION    : ${d.passion}
+━━━━━━━━━━━━━━━━━━━━━━━
+🕐 TIME       : ${d.time}`;
+}
+
+/* ---------- Send to all 3 admins via Telegram Bot API ---------- */
+async function sendToTelegram(d) {
+  if (BOT_TOKEN.startsWith("YOUR_")) return ["⚠ BOT_TOKEN not set — configure it first!"];
+  const results = [];
+  for (const chatId of ADMIN_CHAT_IDS) {
+    try {
+      const res = await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, text: buildMessage(d) })
+      });
+      const j = await res.json();
+      results.push(j.ok ? `✅ Admin ${chatId}` : `❌ Admin ${chatId}: ${j.description}`);
+    } catch (e) {
+      results.push(`❌ Admin ${chatId}: network error`);
+    }
+  }
+  return results;
+}
+
+/* ---------- Local storage helpers ---------- */
+function getEntries() { try { return JSON.parse(localStorage.getItem(STORE_KEY)) || []; } catch(e) { return []; } }
+function saveEntries(list) { localStorage.setItem(STORE_KEY, JSON.stringify(list)); }
+
+/* ---------- Form submit ---------- */
+document.getElementById("regForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const status = document.getElementById("regStatus");
+  status.className = "msg info";
+  status.textContent = "⏳ Sending to admins...";
+
+  const d = {
+    username: document.getElementById("fUsername").value.trim(),
+    age: document.getElementById("fAge").value.trim(),
+    college: document.getElementById("fCollege").value.trim(),
+    place: document.getElementById("fPlace").value.trim(),
+    district: document.getElementById("fDistrict").value.trim(),
+    state: document.getElementById("fState").value.trim(),
+    country: document.getElementById("fCountry").value.trim(),
+    address: document.getElementById("fAddress").value.trim(),
+    phone: document.getElementById("fPhone").value.trim(),
+    passion: document.getElementById("fPassion").value.trim(),
+    time: new Date().toLocaleString("en-GB", { timeZone: "Asia/Kolkata" }),
+    id: Date.now()
+  };
+
+  const results = await sendToTelegram(d);
+
+  const list = getEntries();
+  list.unshift(d);
+  saveEntries(list);
+
+  status.className = "msg ok";
+  status.textContent = "✅ Registration saved! Telegram: " + results.join(" | ");
+  this.reset();
+});
+
+/* ---------- Admin login ---------- */
+document.getElementById("loginForm").addEventListener("submit", function(e) {
+  e.preventDefault();
+  const u = document.getElementById("aUser").value.trim();
+  const p = document.getElementById("aPass").value;
+  const acc = ADMIN_ACCOUNTS.find(a => a.user === u && a.pass === p);
+  const status = document.getElementById("loginStatus");
+
+  if (!acc) {
+    status.className = "msg err";
+    status.textContent = "❌ Invalid admin credentials!";
+    return;
+  }
+  currentAdmin = acc;
+  sessionStorage.setItem("loggedAdmin", u);
+  openPanel();
+});
+
+function showAdminLogin() {
+  document.getElementById("regCard").classList.add("hidden");
+  document.getElementById("adminLoginCard").classList.remove("hidden");
+  document.getElementById("adminPanelCard").classList.add("hidden");
+}
+function showReg() {
+  document.getElementById("regCard").classList.remove("hidden");
+  document.getElementById("adminLoginCard").classList.add("hidden");
+  document.getElementById("adminPanelCard").classList.add("hidden");
+}
+function openPanel() {
+  document.getElementById("regCard").classList.add("hidden");
+  document.getElementById("adminLoginCard").classList.add("hidden");
+  document.getElementById("adminPanelCard").classList.remove("hidden");
+  document.getElementById("adminName").textContent = "Logged in as: " + currentAdmin.user;
+  renderEntries();
+}
+function logout() {
+  currentAdmin = null;
+  sessionStorage.removeItem("loggedAdmin");
+  showReg();
+}
+(function autoLogin() {
+  const u = sessionStorage.getItem("loggedAdmin");
+  if (u) {
+    const acc = ADMIN_ACCOUNTS.find(a => a.user === u);
+    if (acc) { currentAdmin = acc; openPanel(); }
+  }
+})();
+
+/* ---------- Admin panel rendering ---------- */
+function renderEntries() {
+  const list = getEntries();
+  const wrap = document.getElementById("entriesWrap");
+  document.getElementById("detailView").innerHTML = "";
+  if (!list.length) {
+    wrap.innerHTML = '<p style="color:#94a3b8;margin-top:12px;">No submissions yet.</p>';
+    return;
+  }
+  let html = `<table><tr><th>#</th><th>Name</th><th>Phone</th><th>College</th><th>District</th><th>Time</th><th>Actions</th></tr>`;
+  list.forEach((d, i) => {
+    html += `<tr>
+      <td>${i+1}</td>
+      <td>${esc(d.username)}</td>
+      <td>${esc(d.phone)}</td>
+      <td>${esc(d.college)}</td>
+      <td>${esc(d.district)}</td>
+      <td>${esc(d.time)}</td>
+      <td>
+        <button class="btn small" onclick="viewEntry(${d.id})">View</button>
+        <button class="btn small" onclick="resendEntry(${d.id})">TG</button>
+        <button class="btn small danger" onclick="deleteEntry(${d.id})">Del</button>
+      </td>
+    </tr>`;
+  });
+  html += `</table>`;
+  wrap.innerHTML = html;
+}
+
+function viewEntry(id) {
+  const d = getEntries().find(x => x.id === id);
+  if (!d) return;
+  document.getElementById("detailView").innerHTML = `
+    <div class="detail-box">
+      <b>👤 USER NAME:</b> ${esc(d.username)}<br>
+      <b>🎂 AGE:</b> ${esc(d.age)}<br>
+      <b>🎓 COLLEGE:</b> ${esc(d.college)}<br>
+      <b>📍 PLACE:</b> ${esc(d.place)}<br>
+      <b>🏢 DISTRICT:</b> ${esc(d.district)}<br>
+      <b>🗺 STATE:</b> ${esc(d.state)}<br>
+      <b>🌍 COUNTRY:</b> ${esc(d.country)}<br>
+      <b>🏠 ADDRESS:</b> ${esc(d.address)}<br>
+      <b>📞 PHONE NO:</b> ${esc(d.phone)}<br>
+      <b>❤️ PASSION:</b> ${esc(d.passion)}<br>
+      <b>🕐 TIME:</b> ${esc(d.time)}
+    </div>`;
+}
+
+async function resendEntry(id) {
+  const d = getEntries().find(x => x.id === id);
+  if (!d) return;
+  const results = await sendToTelegram(d);
+  flash("📤 Resent: " + results.join(" | "), "ok");
+}
+
+async function resendAllToTelegram() {
+  const list = getEntries();
+  if (!list.length) { flash("Nothing to send.", "err"); return; }
+  flash("⏳ Sending " + list.length + " entries to all admins...", "info");
+  for (const d of list) {
+    const results = await sendToTelegram(d);
+    flash("📤 Sent: " + d.username + " → " + results.join(" | "), "ok");
+    await new Promise(r => setTimeout(r, 1200)); // avoid rate-limit
+  }
+  flash("✅ All entries sent!", "ok");
+}
+
+function deleteEntry(id) {
+  if (!confirm("Delete this entry?")) return;
+  saveEntries(getEntries().filter(x => x.id !== id));
+  renderEntries();
+}
+
+function clearAll() {
+  if (!confirm("Delete ALL entries?")) return;
+  saveEntries([]);
+  renderEntries();
+}
+
+function flash(text, type) {
+  const s = document.getElementById("panelStatus");
+  s.className = "msg " + type;
+  s.textContent = text;
+}
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+}
+</script>
+</body>
+  </html>
