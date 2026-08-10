@@ -110,20 +110,38 @@
     <button class="sb-close" onclick="toggleSidebar(false)">✕</button>
   </div>
   <div class="sb-link" onclick="go('home')">🏠 Home</div>
-  <div class="sb-link" onclick="go('register')">📝 Register</div>
-  <div class="sb-link" onclick="go('learning')">📚 Learning Portal</div>
+  <div class="sb-link" onclick="go('auth')">✉️ Email Sign-in</div>
+  <div class="sb-link" onclick="openLearningFromMenu()">📚 Learning Portal</div>
   <div class="sb-sep"></div>
   <div class="sb-link" id="sbAdminLink" onclick="sidebarAdminClick()">🔐 Admin Login</div>
 </div>
 
-<!-- ================= HOME PAGE (Register + Learning) ================= -->
-<div id="page-home">
+<!-- ================= USER FLOW ================= -->
+<div id="userApp">
+  <!-- 1. Email Sign-in -->
+  <div class="container" id="authStep">
+    <div class="card">
+      <div style="font-size:42px;text-align:center;margin-bottom:10px">🎓</div>
+      <h1>Welcome to CAO Open Learning</h1>
+      <div class="sub">Sign in with your email to start learning.</div>
+      <form id="emailForm">
+        <label>EMAIL ID *</label>
+        <input type="email" id="signEmail" placeholder="you@example.com" autocomplete="email" required>
+        <button type="submit" class="btn">CONTINUE WITH EMAIL →</button>
+        <div id="emailStatus" class="msg"></div>
+      </form>
+      <div class="detail-box" style="margin-top:16px;font-size:12px;line-height:1.6">
+        🔒 Your email is used to identify your learning account. This demo stores account data only in this browser.
+      </div>
+    </div>
+  </div>
 
-  <!-- ---- Registration ---- -->
-  <div class="container" id="register">
-    <div class="card" id="regCard">
-      <h1>📝 User Registration</h1>
-      <div class="sub">Fill your details — info is sent to the admin team instantly.</div>
+  <!-- 2. User profile form -->
+  <div class="container hidden" id="profileStep">
+    <div class="card">
+      <h1>📝 Complete Your Profile</h1>
+      <div class="sub">One-time setup. After submitting, your Learning Portal will open.</div>
+      <div class="msg info" style="display:block">Signed in as <b id="signedEmail"></b></div>
       <form id="regForm">
         <div class="two-col">
           <div><label>1. USER NAME *</label><input type="text" id="fUsername" required></div>
@@ -136,35 +154,35 @@
         </div>
         <div class="two-col">
           <div><label>6. STATE *</label><input type="text" id="fState" required></div>
-          <div><label>7. COUNTRY *</label><input type="text" id="fCountry" required></div>
+          <div><label>7. COUNTRY *</label><input type="text" id="fCountry" value="India" required></div>
         </div>
         <label>8. ADDRESS *</label><textarea id="fAddress" rows="2" required></textarea>
         <div class="two-col">
           <div><label>9. PHONE NO *</label><input type="tel" id="fPhone" pattern="[0-9+ -]{7,15}" required></div>
           <div><label>10. PASSION *</label><input type="text" id="fPassion" required></div>
         </div>
-        <button type="submit" class="btn">SUBMIT & SEND TO ADMIN ✔</button>
+        <button type="submit" class="btn">SAVE PROFILE & OPEN LEARNING →</button>
         <div id="regStatus" class="msg"></div>
       </form>
     </div>
   </div>
 
-  <!-- ---- Learning Portal ---- -->
-  <div class="container wide" id="learning">
+  <!-- 3. Learning Portal -->
+  <div class="container wide hidden" id="learningStep">
     <div class="card">
-      <h2>📚 Learning Portal</h2>
-      <div class="sub">Free videos curated by the CAO admin team — search or filter by category.</div>
-
-      <div class="lp-search">
-        <input type="text" id="lpSearch" placeholder="🔍 Search videos...">
+      <div class="toolbar" style="justify-content:space-between">
+        <div>
+          <h2>📚 Learning Portal</h2>
+          <div class="sub" style="margin-bottom:0">Welcome, <b id="welcomeName"></b> — choose a video and start learning.</div>
+        </div>
+        <button class="btn small secondary" onclick="signOutUser()">Sign out</button>
       </div>
+      <div class="lp-search"><input type="text" id="lpSearch" placeholder="🔍 Search videos..."></div>
       <div class="lp-chips" id="lpChips"></div>
-
       <div class="video-grid" id="videoGrid"></div>
-      <div class="empty-note hidden" id="lpEmpty">No videos yet. Check back soon — the admin team is adding content 🎬</div>
+      <div class="empty-note hidden" id="lpEmpty">No videos yet. Check back soon 🎬</div>
     </div>
   </div>
-
 </div>
 
 <!-- ================= ADMIN LOGIN ================= -->
@@ -256,7 +274,7 @@
 /* =====================================================================
    CONFIG — இங்க மாத்துங்க!
    ===================================================================== */
-const BOT_TOKEN = "7643527413:AAHNR6WVtvCsMS-hjTRcZA58EorTyCyGZWA";                       // BotFather-ல இருந்து
+const BOT_TOKEN = "YOUR_BOT_TOKEN_HERE"; // Keep secrets on a backend; never expose a real Telegram token in frontend code.                       // BotFather-ல இருந்து
 const ADMIN_CHAT_IDS = [                                       // 3 Admin chat IDs
   "8134902662",
   "8541390455",
@@ -285,21 +303,80 @@ function toggleSidebar(open) {
 }
 function go(target) {
   toggleSidebar(false);
-  document.getElementById("page-home").classList.remove("hidden");
+  if (target === "auth" || target === "home") { showAuth(); return; }
+  if (target === "learning") { openLearningFromMenu(); return; }
   document.getElementById("page-admin-login").classList.add("hidden");
   document.getElementById("page-admin-panel").classList.add("hidden");
-  const anchor = target === "home" ? "register" : target;
-  document.getElementById(anchor).scrollIntoView({ behavior: "smooth" });
 }
 function sidebarAdminClick() {
   toggleSidebar(false);
   if (currentAdmin) { openPanel(); } else { showAdminLogin(); }
 }
 
+/* ---------- User account flow ---------- */
+const USER_KEY = "caoCurrentUser";
+const PROFILE_KEY = "caoProfiles";
+let currentUserEmail = localStorage.getItem(USER_KEY) || "";
+let currentProfile = null;
+
+function getProfiles() { try { return JSON.parse(localStorage.getItem(PROFILE_KEY)) || {}; } catch(e) { return {}; } }
+function saveProfiles(x) { localStorage.setItem(PROFILE_KEY, JSON.stringify(x)); }
+function showAuth() {
+  document.getElementById("page-admin-login").classList.add("hidden");
+  document.getElementById("page-admin-panel").classList.add("hidden");
+  document.getElementById("authStep").classList.remove("hidden");
+  document.getElementById("profileStep").classList.add("hidden");
+  document.getElementById("learningStep").classList.add("hidden");
+}
+function showProfile() {
+  document.getElementById("authStep").classList.add("hidden");
+  document.getElementById("profileStep").classList.remove("hidden");
+  document.getElementById("learningStep").classList.add("hidden");
+  document.getElementById("signedEmail").textContent = currentUserEmail;
+}
+function showLearning() {
+  document.getElementById("authStep").classList.add("hidden");
+  document.getElementById("profileStep").classList.add("hidden");
+  document.getElementById("learningStep").classList.remove("hidden");
+  document.getElementById("welcomeName").textContent = (currentProfile && currentProfile.username) || currentUserEmail;
+  renderChips(); renderVideoGrid();
+}
+function openLearningFromMenu() {
+  toggleSidebar(false);
+  if (!currentUserEmail) { showAuth(); return; }
+  const profiles = getProfiles();
+  currentProfile = profiles[currentUserEmail] || null;
+  if (!currentProfile) { showProfile(); return; }
+  showLearning();
+}
+function signOutUser() {
+  currentUserEmail = "";
+  currentProfile = null;
+  localStorage.removeItem(USER_KEY);
+  showAuth();
+  const s = document.getElementById("emailStatus");
+  s.className = "msg ok"; s.textContent = "Signed out successfully.";
+}
+
+document.getElementById("emailForm").addEventListener("submit", function(e) {
+  e.preventDefault();
+  const email = document.getElementById("signEmail").value.trim().toLowerCase();
+  const status = document.getElementById("emailStatus");
+  if (!email || !/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email)) {
+    status.className = "msg err"; status.textContent = "❌ Enter a valid email address."; return;
+  }
+  currentUserEmail = email;
+  localStorage.setItem(USER_KEY, email);
+  currentProfile = getProfiles()[email] || null;
+  status.className = "msg ok"; status.textContent = "✅ Email accepted. Continue to your profile.";
+  setTimeout(() => currentProfile ? showLearning() : showProfile(), 250);
+});
+
 /* ---------- Telegram Message (English) ---------- */
 function buildMessage(d) {
   return `🔔 NEW USER REGISTRATION
 ━━━━━━━━━━━━━━━━━━━━━━━
+✉️ EMAIL      : ${d.email || "-"}
 👤 USER NAME  : ${d.username}
 🎂 AGE        : ${d.age}
 🎓 COLLEGE    : ${d.college}
@@ -356,6 +433,7 @@ document.getElementById("regForm").addEventListener("submit", async function(e) 
     address: document.getElementById("fAddress").value.trim(),
     phone: document.getElementById("fPhone").value.trim(),
     passion: document.getElementById("fPassion").value.trim(),
+    email: currentUserEmail,
     time: new Date().toLocaleString("en-GB", { timeZone: "Asia/Kolkata" }),
     id: Date.now()
   };
@@ -365,10 +443,15 @@ document.getElementById("regForm").addEventListener("submit", async function(e) 
   const list = getEntries();
   list.unshift(d);
   saveEntries(list);
+  const profiles = getProfiles();
+  profiles[currentUserEmail] = d;
+  saveProfiles(profiles);
+  currentProfile = d;
 
   status.className = "msg ok";
-  status.textContent = "✅ Registration saved! Telegram: " + results.join(" | ");
+  status.textContent = "✅ Profile saved! Opening Learning Portal...";
   this.reset();
+  setTimeout(showLearning, 450);
 });
 
 /* ---------- Admin login ---------- */
@@ -394,7 +477,7 @@ function showAdminLogin() {
   document.getElementById("page-admin-login").classList.remove("hidden");
   document.getElementById("page-admin-panel").classList.add("hidden");
 }
-function showReg() { go("home"); }
+function showReg() { showAuth(); }
 function openPanel() {
   document.getElementById("page-home").classList.add("hidden");
   document.getElementById("page-admin-login").classList.add("hidden");
@@ -685,6 +768,13 @@ function deleteVideo(id) {
 }
 
 /* ---------- Init ---------- */
+if (currentUserEmail) {
+  const profiles = getProfiles();
+  currentProfile = profiles[currentUserEmail] || null;
+  if (currentProfile) showLearning(); else showProfile();
+} else {
+  showAuth();
+}
 renderChips();
 renderVideoGrid();
 </script>
