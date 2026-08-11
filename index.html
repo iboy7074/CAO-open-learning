@@ -176,23 +176,45 @@
 
   <div class="container" id="signin">
     <div class="card">
-      <div class="step-dots"><span class="active"></span><span></span><span></span></div>
-      <h1>Email Sign-in</h1>
-      <div class="sub">No password — we'll email you a 6-digit code.</div>
+      <div class="vm-tabs">
+        <button class="btn small" id="authTabLogin" onclick="showAuthTab('login')">Login</button>
+        <button class="btn small secondary" id="authTabRegister" onclick="showAuthTab('register')">Create account</button>
+      </div>
 
-      <form id="otpRequestForm">
-        <label>Email</label><input type="email" id="siEmail" required>
-        <button type="submit" class="btn" id="otpRequestBtn">Send code</button>
-        <div id="otpRequestStatus" class="msg"></div>
-      </form>
+      <!-- ---- Returning students: username + password ---- -->
+      <div id="authPane-login">
+        <h1>Welcome back</h1>
+        <div class="sub">Login with the username and password you set when you registered.</div>
+        <form id="loginStudentForm">
+          <label>Username</label><input type="text" id="liUsername" required>
+          <label>Password</label><input type="password" id="liPassword" required>
+          <button type="submit" class="btn" id="loginStudentBtn">Login</button>
+          <div id="loginStudentStatus" class="msg"></div>
+        </form>
+      </div>
 
-      <form id="otpVerifyForm" class="hidden" style="margin-top:6px;">
-        <label>6-digit code</label>
-        <div class="otp-row"><input type="text" id="siOtp" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" required></div>
-        <button type="submit" class="btn" id="otpVerifyBtn">Verify & continue</button>
-        <div class="link"><a onclick="backToEmailStep()">Use a different email</a></div>
-        <div id="otpVerifyStatus" class="msg"></div>
-      </form>
+      <!-- ---- First-time: set username + password, confirm email with OTP ---- -->
+      <div id="authPane-register" class="hidden">
+        <div class="step-dots"><span class="active"></span><span></span><span></span></div>
+        <h1>Create your account</h1>
+        <div class="sub">Pick a username and password — we'll email you a code to confirm it's really you.</div>
+
+        <form id="registerForm">
+          <label>Username</label><input type="text" id="reUsername" required>
+          <label>Email</label><input type="email" id="reEmail" required>
+          <label>Password</label><input type="password" id="rePassword" minlength="6" required>
+          <button type="submit" class="btn" id="registerBtn">Send verification code</button>
+          <div id="registerStatus" class="msg"></div>
+        </form>
+
+        <form id="verifyRegisterForm" class="hidden" style="margin-top:6px;">
+          <label>6-digit code</label>
+          <div class="otp-row"><input type="text" id="reOtp" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" required></div>
+          <button type="submit" class="btn" id="verifyRegisterBtn">Verify & create account</button>
+          <div class="link"><a onclick="backToRegisterStep()">Start over</a></div>
+          <div id="verifyRegisterStatus" class="msg"></div>
+        </form>
+      </div>
     </div>
   </div>
 </div>
@@ -425,37 +447,26 @@ function esc(s) {
 }
 
 /* =====================================================================
-   STEP 1: EMAIL SIGN-IN (OTP)
+   STEP 1: LOGIN (returning students) / REGISTER (first time)
    ===================================================================== */
-document.getElementById("otpRequestForm").addEventListener("submit", async function(e) {
-  e.preventDefault();
-  const status = document.getElementById("otpRequestStatus");
-  const btn = document.getElementById("otpRequestBtn");
-  btn.disabled = true;
-  status.className = "msg info";
-  status.textContent = "Sending code...";
-  const email = document.getElementById("siEmail").value.trim();
-  try {
-    const data = await api("/auth/request-otp", { method: "POST", body: JSON.stringify({ email }) });
-    pendingEmail = email;
-    status.className = "msg ok";
-    status.textContent = data.emailStatus;
-    document.getElementById("otpVerifyForm").classList.remove("hidden");
-    document.getElementById("siOtp").focus();
-  } catch (err) {
-    status.className = "msg err";
-    status.textContent = err.message;
-  } finally { btn.disabled = false; }
-});
+function showAuthTab(tab) {
+  document.getElementById("authPane-login").classList.toggle("hidden", tab !== "login");
+  document.getElementById("authPane-register").classList.toggle("hidden", tab !== "register");
+  document.getElementById("authTabLogin").className = "btn small " + (tab === "login" ? "" : "secondary");
+  document.getElementById("authTabRegister").className = "btn small " + (tab === "register" ? "" : "secondary");
+}
 
-document.getElementById("otpVerifyForm").addEventListener("submit", async function(e) {
+/* ---- Login: username + password ---- */
+document.getElementById("loginStudentForm").addEventListener("submit", async function(e) {
   e.preventDefault();
-  const status = document.getElementById("otpVerifyStatus");
-  const btn = document.getElementById("otpVerifyBtn");
+  const status = document.getElementById("loginStudentStatus");
+  const btn = document.getElementById("loginStudentBtn");
   btn.disabled = true;
   try {
-    const data = await api("/auth/verify-otp", { method: "POST",
-      body: JSON.stringify({ email: pendingEmail, otp: document.getElementById("siOtp").value.trim() }) });
+    const data = await api("/auth/login", { method: "POST", body: JSON.stringify({
+      username: document.getElementById("liUsername").value.trim(),
+      password: document.getElementById("liPassword").value
+    }) });
     studentToken = data.token; studentEmail = data.email;
     sessionStorage.setItem("studentToken", studentToken);
     sessionStorage.setItem("studentEmail", studentEmail);
@@ -465,10 +476,53 @@ document.getElementById("otpVerifyForm").addEventListener("submit", async functi
     status.className = "msg err"; status.textContent = err.message;
   } finally { btn.disabled = false; }
 });
-function backToEmailStep() {
-  document.getElementById("otpVerifyForm").classList.add("hidden");
-  document.getElementById("otpRequestStatus").className = "msg";
-  document.getElementById("otpVerifyForm").reset();
+
+/* ---- Register: username + email + password, then confirm with emailed OTP ---- */
+document.getElementById("registerForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const status = document.getElementById("registerStatus");
+  const btn = document.getElementById("registerBtn");
+  btn.disabled = true;
+  status.className = "msg info"; status.textContent = "Sending code...";
+
+  const email = document.getElementById("reEmail").value.trim();
+  try {
+    const data = await api("/auth/register", { method: "POST", body: JSON.stringify({
+      username: document.getElementById("reUsername").value.trim(),
+      email,
+      password: document.getElementById("rePassword").value
+    }) });
+    pendingEmail = email;
+    status.className = "msg ok"; status.textContent = data.emailStatus;
+    document.getElementById("verifyRegisterForm").classList.remove("hidden");
+    document.getElementById("reOtp").focus();
+  } catch (err) {
+    status.className = "msg err"; status.textContent = err.message;
+  } finally { btn.disabled = false; }
+});
+
+document.getElementById("verifyRegisterForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const status = document.getElementById("verifyRegisterStatus");
+  const btn = document.getElementById("verifyRegisterBtn");
+  btn.disabled = true;
+  try {
+    const data = await api("/auth/verify-register", { method: "POST",
+      body: JSON.stringify({ email: pendingEmail, otp: document.getElementById("reOtp").value.trim() }) });
+    studentToken = data.token; studentEmail = data.email;
+    sessionStorage.setItem("studentToken", studentToken);
+    sessionStorage.setItem("studentEmail", studentEmail);
+    updateNavRight();
+    goLearning();
+  } catch (err) {
+    status.className = "msg err"; status.textContent = err.message;
+  } finally { btn.disabled = false; }
+});
+function backToRegisterStep() {
+  document.getElementById("verifyRegisterForm").classList.add("hidden");
+  document.getElementById("registerStatus").className = "msg";
+  document.getElementById("registerForm").reset();
+  document.getElementById("verifyRegisterForm").reset();
 }
 
 /* =====================================================================
@@ -674,7 +728,7 @@ function goToCourse(id) {
   } else {
     go("home");
     document.getElementById("signin").scrollIntoView({ behavior: "smooth" });
-    setTimeout(() => document.getElementById("siEmail").focus(), 400);
+    setTimeout(() => document.getElementById("liUsername").focus(), 400);
   }
 }
 
