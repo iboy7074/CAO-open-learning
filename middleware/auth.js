@@ -3,7 +3,8 @@ const jwt = require("jsonwebtoken");
 function verifyToken(requiredRole) {
   return (req, res, next) => {
     const header = req.headers.authorization || "";
-    const token = header.startsWith("Bearer ") ? header.slice(7) : null;
+    const headerToken = header.startsWith("Bearer ") ? header.slice(7) : null;
+    const token = headerToken || req.query.token; // query fallback for <video>/<img> tags that can't set headers
     if (!token) return res.status(401).json({ error: "Missing token" });
 
     try {
