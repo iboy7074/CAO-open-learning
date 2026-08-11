@@ -9,10 +9,10 @@ const Admin = require("./models/Admin");
 const Video = require("./models/Video");
 
 const SAMPLE_VIDEOS = [
-  { title: "Learn Python - Full Course for Beginners", category: "Tech", youtubeId: "rfscVS0vtbw" },
-  { title: "Cyber Security Full Course for Beginners", category: "Cybersecurity", youtubeId: "U_P23SqJaDc" },
-  { title: "Getting Started with Figma: 1-Hour UI Design Course", category: "Design", youtubeId: "nq19w0d5o0U" },
-  { title: "The Foundations of Entrepreneurship - Full Course", category: "Business", youtubeId: "UEngvxZ11sw" }
+  { title: "Learn Python - Full Course for Beginners", category: "Tech", source: "youtube", youtubeId: "rfscVS0vtbw" },
+  { title: "Cyber Security Full Course for Beginners", category: "Cybersecurity", source: "youtube", youtubeId: "U_P23SqJaDc" },
+  { title: "Getting Started with Figma: 1-Hour UI Design Course", category: "Design", source: "youtube", youtubeId: "nq19w0d5o0U" },
+  { title: "The Foundations of Entrepreneurship - Full Course", category: "Business", source: "youtube", youtubeId: "UEngvxZ11sw" }
 ];
 
 async function seed() {

@@ -69,7 +69,30 @@ Then host `index.html` on GitHub Pages or Vercel as before.
 1. **Email Sign-in** — student enters email → gets a 6-digit code → enters it → gets a session (JWT).
 2. **Profile Form** — first-time sign-in prompts for college/address/phone/etc. Submitting notifies admins on Telegram.
 3. **Learning Portal** — unlocked once signed in and profile is complete.
-4. **Videos** — search, filter by category, watch, mark completed — all tied to the signed-in email.
+4. **Videos** — search, filter by category, watch, like, share, mark completed — YouTube links or real uploaded files.
+
+## Video storage: YouTube links + real uploads via Telegram
+
+Admins can add videos two ways:
+- **YouTube link** — same as before, just paste a URL.
+- **Upload a real video file** — the server sends it to a private Telegram channel your bot
+  is admin of, and streams it back to students on demand through your own server (so the
+  bot token never reaches the browser). Max 45MB per file (Telegram bot API's upload limit).
+
+### Set up the storage channel
+1. In Telegram, create a **private channel** (not a group) — e.g. "CAO Video Storage".
+2. Add your bot as an **admin** of that channel (Channel settings → Administrators → Add Admin → search your bot).
+3. Send any message in the channel, then forward it to **@RawDataBot** — it'll reply with
+   JSON containing a `"chat":{"id": -1001234567890, ...}` field. That number is your chat ID.
+4. Set `TELEGRAM_STORAGE_CHAT_ID` in `.env` to that number (it's negative, keep the `-`).
+
+Students never see this channel — it's just cold storage. Their view is the Learning Portal streaming endpoint.
+
+## Likes & sharing
+- Students can like/unlike any video (heart icon, both on the card and inside the player).
+- Share button uses the native share sheet on mobile, or copies a deep link
+  (`yoursite.com/?video=<id>`) to the clipboard on desktop. Opening that link while signed in
+  jumps straight to that video.
 
 ## Notes
 - Render's free tier sleeps after inactivity — first request after idle takes ~30s to wake up.
