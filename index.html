@@ -611,6 +611,11 @@ function thumbHtml(v) {
   if (v.source === "youtube") {
     return `<img class="video-thumb" src="https://img.youtube.com/vi/${v.youtubeId}/hqdefault.jpg" alt="${esc(v.title)}" loading="lazy">`;
   }
+  if (v.hasThumbnail) {
+    const thumbUrl = `${API_BASE}/videos/${v._id}/thumbnail?token=${encodeURIComponent(studentToken)}`;
+    return `<img class="video-thumb" src="${thumbUrl}" alt="${esc(v.title)}" loading="lazy"
+      onerror="this.outerHTML='&lt;div class=&quot;video-thumb placeholder&quot;&gt;🎬&lt;/div&gt;'">`;
+  }
   return `<div class="video-thumb placeholder">🎬</div>`;
 }
 
