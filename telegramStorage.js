@@ -7,7 +7,7 @@
 const BOT_TOKEN = () => process.env.TELEGRAM_BOT_TOKEN;
 const STORAGE_CHAT_ID = () => process.env.TELEGRAM_STORAGE_CHAT_ID;
 
-/* Upload a video buffer to Telegram, return { fileId, messageId } */
+/* Upload a video buffer to Telegram, return { fileId, thumbFileId, messageId } */
 async function uploadVideoToTelegram(buffer, filename, mimetype) {
   if (!BOT_TOKEN() || !STORAGE_CHAT_ID()) {
     throw new Error("Telegram storage not configured (TELEGRAM_BOT_TOKEN / TELEGRAM_STORAGE_CHAT_ID missing).");
@@ -28,7 +28,8 @@ async function uploadVideoToTelegram(buffer, filename, mimetype) {
   }
 
   const video = data.result.video || data.result.document;
-  return { fileId: video.file_id, messageId: data.result.message_id };
+  const thumb = video.thumbnail || video.thumb; // Telegram auto-generates a frame as the thumbnail
+  return { fileId: video.file_id, thumbFileId: thumb ? thumb.file_id : null, messageId: data.result.message_id };
 }
 
 /* Resolve a Telegram file_id to a temporary direct download URL */
