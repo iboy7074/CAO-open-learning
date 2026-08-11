@@ -36,11 +36,13 @@ function shapeVideo(v, viewerEmail) {
     category: obj.category,
     source: obj.source,
     youtubeId: obj.youtubeId,
+    hasThumbnail: obj.source === "telegram" ? !!obj.telegramThumbFileId : false,
     addedBy: obj.addedBy,
     createdAt: obj.createdAt,
     likeCount: (obj.likes || []).length,
     liked: viewerEmail ? (obj.likes || []).includes(viewerEmail) : false
-    // telegramFileId intentionally never sent to the client - stream route handles it server-side
+    // telegramFileId / telegramThumbFileId intentionally never sent to the client -
+    // the stream/thumbnail routes handle those server-side
   };
 }
 
@@ -86,6 +88,24 @@ router.get("/:id/stream", verifyToken("student"), async (req, res) => {
   } catch (e) {
     console.error(e);
     res.status(500).json({ error: "Could not stream video." });
+  }
+});
+
+/* ---------- GET /api/videos/:id/thumbnail ---------- (auto-generated frame from Telegram) */
+router.get("/:id/thumbnail", verifyToken(), async (req, res) => {
+  try {
+    const video = await Video.findById(req.params.id);
+    if (!video || video.source !== "telegram" || !video.telegramThumbFileId) {
+      return res.status(404).end();
+    }
+    const fileUrl = await resolveTelegramFileUrl(video.telegramThumbFileId);
+    const upstream = await fetch(fileUrl);
+    res.setHeader("Content-Type", upstream.headers.get("content-type") || "image/jpeg");
+    res.setHeader("Cache-Control", "public, max-age=86400");
+    const buf = Buffer.from(await upstream.arrayBuffer());
+    res.end(buf);
+  } catch (e) {
+    res.status(404).end();
   }
 });
 
@@ -138,9 +158,9 @@ router.post("/upload", verifyToken("admin"), upload.single("file"), async (req, 
       return res.status(400).json({ error: "Only video files are allowed." });
     }
 
-    const { fileId } = await uploadVideoToTelegram(req.file.buffer, req.file.originalname, req.file.mimetype);
+    const { fileId, thumbFileId } = await uploadVideoToTelegram(req.file.buffer, req.file.originalname, req.file.mimetype);
     const video = await Video.create({
-      title, category, source: "telegram", telegramFileId: fileId, addedBy: req.user.username
+      title, category, source: "telegram", telegramFileId: fileId, telegramThumbFileId: thumbFileId, addedBy: req.user.username
     });
     res.status(201).json(shapeVideo(video, null));
   } catch (e) {
