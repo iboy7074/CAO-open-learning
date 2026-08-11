@@ -46,6 +46,12 @@ function shapeVideo(v, viewerEmail) {
   };
 }
 
+/* ---------- GET /api/videos/public ---------- (no login needed — browse-only catalog for the homepage) */
+router.get("/public", async (req, res) => {
+  const videos = await Video.find().sort({ createdAt: -1 });
+  res.json(videos.map(v => shapeVideo(v, null)));
+});
+
 /* ---------- GET /api/videos ---------- (student or admin) */
 router.get("/", verifyToken(), async (req, res) => {
   const videos = await Video.find().sort({ createdAt: -1 });
@@ -91,8 +97,8 @@ router.get("/:id/stream", verifyToken("student"), async (req, res) => {
   }
 });
 
-/* ---------- GET /api/videos/:id/thumbnail ---------- (auto-generated frame from Telegram) */
-router.get("/:id/thumbnail", verifyToken(), async (req, res) => {
+/* ---------- GET /api/videos/:id/thumbnail ---------- (public - just a preview frame, not the full video) */
+router.get("/:id/thumbnail", async (req, res) => {
   try {
     const video = await Video.findById(req.params.id);
     if (!video || video.source !== "telegram" || !video.telegramThumbFileId) {
