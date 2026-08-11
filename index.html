@@ -160,8 +160,20 @@
   <div class="sb-sep"></div>
 </div>
 
-<!-- ================= HOME / EMAIL SIGN-IN ================= -->
+<!-- ================= HOME: PUBLIC COURSE CATALOG + EMAIL SIGN-IN ================= -->
 <div id="page-home">
+
+  <!-- ---- Public course catalog (no login needed to browse) ---- -->
+  <div class="container wide" id="explore">
+    <div class="card">
+      <h2>Explore Courses</h2>
+      <div class="sub" style="margin-bottom:0;">Browse what's on CAO Open Learning — sign in to start watching.</div>
+      <div class="lp-chips" id="publicChips"></div>
+      <div class="video-grid" id="publicVideoGrid"></div>
+      <div class="empty-note hidden" id="publicEmpty"></div>
+    </div>
+  </div>
+
   <div class="container" id="signin">
     <div class="card">
       <div class="step-dots"><span class="active"></span><span></span><span></span></div>
@@ -600,6 +612,72 @@ async function loadVideos() {
     empty.classList.remove("hidden"); empty.textContent = err.message;
   }
 }
+
+/* ---------- Public catalog on the Home page (no login needed to browse) ---------- */
+let publicVideos = [];
+let activePublicCategory = "All";
+
+async function loadPublicVideos() {
+  try {
+    publicVideos = await api("/videos/public", {});
+    renderPublicChips();
+    renderPublicVideoGrid();
+  } catch (err) {
+    document.getElementById("publicVideoGrid").innerHTML = "";
+    const empty = document.getElementById("publicEmpty");
+    empty.classList.remove("hidden"); empty.textContent = "Couldn't load courses right now.";
+  }
+}
+function renderPublicChips() {
+  const cats = ["All", ...new Set(publicVideos.map(v => v.category))];
+  document.getElementById("publicChips").innerHTML = cats.map(c =>
+    `<div class="chip ${c === activePublicCategory ? "active" : ""}" onclick="setPublicCategory('${esc(c)}')">${esc(c)}</div>`).join("");
+}
+function setPublicCategory(c) { activePublicCategory = c; renderPublicChips(); renderPublicVideoGrid(); }
+
+function renderPublicVideoGrid() {
+  const filtered = activePublicCategory === "All" ? publicVideos : publicVideos.filter(v => v.category === activePublicCategory);
+  const grid = document.getElementById("publicVideoGrid");
+  const empty = document.getElementById("publicEmpty");
+
+  if (!filtered.length) {
+    grid.innerHTML = "";
+    empty.classList.remove("hidden");
+    empty.textContent = "No courses posted yet. Check back soon.";
+    return;
+  }
+  empty.classList.add("hidden");
+
+  grid.innerHTML = filtered.map(v => `
+    <div class="video-card">
+      <div class="video-thumb-wrap" onclick='goToCourse(${JSON.stringify(v._id)})'>
+        <div class="source-tag">${v.source === "youtube" ? "YouTube" : "Uploaded"}</div>
+        ${thumbHtml(v)}
+      </div>
+      <div class="video-info">
+        <div class="video-title" onclick='goToCourse(${JSON.stringify(v._id)})' style="cursor:pointer;">${esc(v.title)}</div>
+        <div class="video-meta-row">
+          <span class="video-cat">${esc(v.category)}</span>
+          <span class="icon-btn">🤍 ${v.likeCount}</span>
+        </div>
+      </div>
+    </div>
+  `).join("");
+}
+
+/* Clicking a course on the public catalog: signed in students jump straight to it,
+   everyone else is sent to sign-in and lands on the same video right after. */
+function goToCourse(id) {
+  pendingDeepLinkVideoId = id;
+  if (studentToken) {
+    goLearning();
+  } else {
+    go("home");
+    document.getElementById("signin").scrollIntoView({ behavior: "smooth" });
+    setTimeout(() => document.getElementById("siEmail").focus(), 400);
+  }
+}
+
 function renderChips() {
   const cats = ["All", ...new Set(currentVideos.map(v => v.category))];
   document.getElementById("lpChips").innerHTML = cats.map(c =>
@@ -612,7 +690,7 @@ function thumbHtml(v) {
     return `<img class="video-thumb" src="https://img.youtube.com/vi/${v.youtubeId}/hqdefault.jpg" alt="${esc(v.title)}" loading="lazy">`;
   }
   if (v.hasThumbnail) {
-    const thumbUrl = `${API_BASE}/videos/${v._id}/thumbnail?token=${encodeURIComponent(studentToken)}`;
+    const thumbUrl = `${API_BASE}/videos/${v._id}/thumbnail`;
     return `<img class="video-thumb" src="${thumbUrl}" alt="${esc(v.title)}" loading="lazy"
       onerror="this.outerHTML='&lt;div class=&quot;video-thumb placeholder&quot;&gt;🎬&lt;/div&gt;'">`;
   }
@@ -831,6 +909,7 @@ function handleLogoTap() {
 
 /* ---------- Init ---------- */
 updateNavRight();
+loadPublicVideos();
 if (new URLSearchParams(location.search).get("admin") === "1") {
   sidebarAdminClick();
 } else if (studentToken) {
