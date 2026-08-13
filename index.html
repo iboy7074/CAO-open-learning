@@ -1,0 +1,1005 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CAO Open Learning</title>
+<style>
+  :root{
+    --ink:#161B2E;
+    --ink-soft:#525A72;
+    --bg:#F6F7FB;
+    --card:#FFFFFF;
+    --line:#E4E7F0;
+    --indigo:#4338CA;
+    --indigo-deep:#2E259C;
+    --gold:#C9922A;
+    --gold-soft:#FBF1DD;
+    --green:#1E8E5A;
+    --green-soft:#E8F6EE;
+    --red:#D0392B;
+    --red-soft:#FCEBE9;
+    --radius:14px;
+    font-family:'Segoe UI', system-ui, Roboto, Arial, sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box;font-family:inherit;}
+  html{scroll-behavior:smooth;}
+  body{background:var(--bg);color:var(--ink);min-height:100vh;padding-top:64px;}
+  .hidden{display:none !important;}
+
+  /* ---------- Navbar ---------- */
+  .navbar{position:fixed;top:0;left:0;right:0;height:64px;background:var(--card);border-bottom:1px solid var(--line);
+    display:flex;align-items:center;gap:14px;padding:0 20px;z-index:200;}
+  .hamburger{background:none;border:none;color:var(--ink);font-size:22px;cursor:pointer;padding:6px 10px;border-radius:8px;}
+  .hamburger:hover{background:var(--bg);}
+  .logo{display:flex;align-items:center;gap:9px;}
+  .logo-mark{width:30px;height:30px;border-radius:9px;background:linear-gradient(135deg,var(--indigo),var(--gold));
+    display:flex;align-items:center;justify-content:center;color:#fff;font-weight:800;font-size:14px;letter-spacing:-0.5px;}
+  .logo-text{font-weight:800;font-size:17px;letter-spacing:-0.2px;}
+  .logo-text span{color:var(--ink-soft);font-weight:600;font-size:12.5px;margin-left:6px;}
+  .nav-right{margin-left:auto;font-size:13px;color:var(--ink-soft);font-weight:600;}
+
+  /* ---------- Sidebar ---------- */
+  .backdrop{position:fixed;inset:0;background:rgba(20,22,40,.45);z-index:220;opacity:0;pointer-events:none;transition:opacity .2s;}
+  .backdrop.open{opacity:1;pointer-events:auto;}
+  .sidebar{position:fixed;top:0;left:0;bottom:0;width:270px;background:var(--card);border-right:1px solid var(--line);
+    z-index:230;transform:translateX(-100%);transition:transform .25s ease;display:flex;flex-direction:column;padding:18px 0;}
+  .sidebar.open{transform:translateX(0);}
+  .sb-head{display:flex;align-items:center;justify-content:space-between;padding:0 18px 16px;border-bottom:1px solid var(--line);margin-bottom:10px;}
+  .sb-close{background:none;border:none;color:var(--ink-soft);font-size:20px;cursor:pointer;}
+  .sb-link{display:flex;align-items:center;gap:10px;padding:12px 20px;color:var(--ink-soft);cursor:pointer;font-size:14px;font-weight:700;border-left:3px solid transparent;}
+  .sb-link:hover{background:var(--bg);color:var(--indigo);}
+  .sb-sep{height:1px;background:var(--line);margin:10px 18px;}
+
+  /* ---------- Layout ---------- */
+  .container{width:100%;max-width:520px;margin:0 auto;padding:24px 20px;}
+  .wide{max-width:1040px;}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:30px;box-shadow:0 1px 3px rgba(20,22,40,.04);}
+  h1{font-size:23px;font-weight:800;margin-bottom:4px;letter-spacing:-0.3px;}
+  h2{font-size:20px;font-weight:800;margin-bottom:4px;letter-spacing:-0.2px;}
+  .sub{font-size:13.5px;color:var(--ink-soft);margin-bottom:22px;line-height:1.5;}
+  label{display:block;font-size:12.5px;font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin:14px 0 6px;color:var(--ink-soft);}
+  input,textarea,select{width:100%;padding:11px 13px;border-radius:9px;border:1.5px solid var(--line);background:#fff;color:var(--ink);font-size:14.5px;outline:none;transition:.15s;}
+  input:focus,textarea:focus,select:focus{border-color:var(--indigo);box-shadow:0 0 0 3px rgba(67,56,202,.1);}
+  textarea{resize:vertical;}
+  .btn{width:100%;padding:13px;border:none;border-radius:9px;font-size:14.5px;font-weight:700;cursor:pointer;margin-top:20px;
+    background:var(--indigo);color:#fff;transition:.15s;}
+  .btn:hover{background:var(--indigo-deep);}
+  .btn:disabled{opacity:.55;cursor:not-allowed;}
+  .btn.secondary{background:var(--bg);color:var(--ink);margin-top:8px;border:1.5px solid var(--line);}
+  .btn.secondary:hover{background:#EDEFF6;}
+  .btn.danger{background:var(--red-soft);color:var(--red);}
+  .btn.danger:hover{background:#F8D9D6;}
+  .btn.gold{background:var(--gold);color:#fff;}
+  .btn.gold:hover{background:#B0801F;}
+  .btn.small{width:auto;padding:8px 14px;font-size:12.5px;margin-top:0;}
+  .btn.auto{width:auto;}
+  .link{text-align:center;margin-top:16px;font-size:13px;color:var(--ink-soft);}
+  .link a{color:var(--indigo);cursor:pointer;text-decoration:none;font-weight:700;}
+  .msg{padding:11px 13px;border-radius:9px;font-size:13px;margin-top:14px;display:none;font-weight:600;}
+  .msg.ok{display:block;background:var(--green-soft);color:var(--green);}
+  .msg.err{display:block;background:var(--red-soft);color:var(--red);}
+  .msg.info{display:block;background:#EEF0FC;color:var(--indigo);}
+  table{width:100%;border-collapse:collapse;font-size:13px;margin-top:12px;}
+  th,td{padding:10px 8px;border-bottom:1px solid var(--line);text-align:left;}
+  th{color:var(--ink-soft);font-size:11px;text-transform:uppercase;letter-spacing:.3px;}
+  tr:hover{background:var(--bg);}
+  .detail-box{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:16px;margin-top:12px;font-size:13.5px;line-height:2;}
+  .detail-box b{color:var(--indigo);}
+  .toolbar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:14px;}
+  .two-col{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;}
+  @media (max-width:480px){.two-col{grid-template-columns:1fr;}}
+  .otp-row input{letter-spacing:8px;font-size:20px;text-align:center;font-weight:700;}
+  .step-dots{display:flex;gap:6px;justify-content:center;margin-bottom:20px;}
+  .step-dots span{width:7px;height:7px;border-radius:50%;background:var(--line);}
+  .step-dots span.active{background:var(--indigo);}
+
+  /* ---------- Learning Portal ---------- */
+  .lp-top{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;flex-wrap:wrap;}
+  .lp-search{display:flex;gap:10px;margin-top:16px;}
+  .lp-search input{flex:1;}
+  .lp-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px;}
+  .chip{padding:7px 16px;border-radius:20px;background:var(--bg);border:1.5px solid var(--line);color:var(--ink-soft);font-size:12.5px;font-weight:700;cursor:pointer;}
+  .chip:hover{color:var(--ink);}
+  .chip.active{background:var(--indigo);color:#fff;border-color:var(--indigo);}
+  .video-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:18px;margin-top:22px;}
+  .video-card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;transition:.15s;position:relative;box-shadow:0 1px 2px rgba(20,22,40,.03);}
+  .video-card:hover{border-color:var(--indigo);box-shadow:0 6px 18px rgba(67,56,202,.1);transform:translateY(-2px);}
+  .video-thumb-wrap{position:relative;cursor:pointer;}
+  .video-thumb{width:100%;aspect-ratio:16/9;object-fit:cover;background:var(--bg);display:block;}
+  .video-thumb.placeholder{display:flex;align-items:center;justify-content:center;font-size:34px;background:linear-gradient(135deg,#EEF0FC,#FBF1DD);}
+  .video-info{padding:12px 14px 14px;}
+  .video-title{font-size:14px;font-weight:800;color:var(--ink);line-height:1.35;margin-bottom:8px;min-height:38px;}
+  .video-meta-row{display:flex;align-items:center;justify-content:space-between;gap:8px;}
+  .video-cat{font-size:10.5px;font-weight:700;color:var(--indigo);background:#EEF0FC;padding:3px 10px;border-radius:12px;}
+  .video-actions{display:flex;gap:6px;}
+  .icon-btn{background:none;border:none;cursor:pointer;font-size:14px;color:var(--ink-soft);display:flex;align-items:center;gap:4px;padding:4px 6px;border-radius:7px;font-weight:700;}
+  .icon-btn:hover{background:var(--bg);}
+  .icon-btn.liked{color:var(--red);}
+  .done-tag{position:absolute;top:10px;right:10px;background:var(--green);color:#fff;font-size:10px;font-weight:800;padding:4px 10px;border-radius:20px;z-index:2;}
+  .source-tag{position:absolute;top:10px;left:10px;background:rgba(22,27,46,.72);color:#fff;font-size:10px;font-weight:700;padding:4px 9px;border-radius:20px;z-index:2;}
+  .empty-note{color:var(--ink-soft);font-size:13.5px;margin-top:20px;text-align:center;padding:40px 16px;border:1.5px dashed var(--line);border-radius:var(--radius);}
+
+  .modal-back{position:fixed;inset:0;background:rgba(20,22,40,.6);z-index:300;display:flex;align-items:center;justify-content:center;padding:20px;}
+  .modal-box{width:100%;max-width:780px;background:var(--card);border-radius:16px;overflow:hidden;}
+  .modal-video{width:100%;aspect-ratio:16/9;border:0;display:block;background:#000;}
+  .modal-body{padding:18px 20px;}
+  .modal-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;}
+  .modal-close{background:var(--bg);border:none;color:var(--ink);width:32px;height:32px;border-radius:9px;cursor:pointer;font-size:16px;flex-shrink:0;}
+  .modal-actions{display:flex;gap:10px;margin-top:16px;flex-wrap:wrap;}
+  .modal-actions .btn{margin-top:0;width:auto;flex:1;min-width:140px;}
+
+  /* ---------- Admin: video manager ---------- */
+  .vm-tabs{display:flex;gap:8px;margin-bottom:16px;}
+  .vm-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:10px;margin-top:8px;background:var(--bg);}
+  .vm-row .t{font-size:13px;font-weight:700;}
+  .vm-row .c{font-size:11px;color:var(--indigo);font-weight:600;}
+  .filedrop{border:2px dashed var(--line);border-radius:10px;padding:22px;text-align:center;font-size:13px;color:var(--ink-soft);margin-top:6px;cursor:pointer;}
+  .filedrop:hover{border-color:var(--indigo);}
+  .filedrop.has-file{border-color:var(--green);background:var(--green-soft);color:var(--green);font-weight:700;}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--ink);color:#fff;padding:11px 20px;
+    border-radius:10px;font-size:13px;font-weight:600;z-index:400;box-shadow:0 8px 24px rgba(0,0,0,.2);}
+</style>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+</head>
+<body>
+
+<div class="navbar">
+  <button class="hamburger" onclick="toggleSidebar(true)">☰</button>
+  <div class="logo" id="navLogo" onclick="handleLogoTap()"><div class="logo-mark">C</div><div class="logo-text">CAO <span>Open Learning</span></div></div>
+  <div class="nav-right" id="navRight"></div>
+</div>
+
+<div class="backdrop" id="backdrop" onclick="toggleSidebar(false)"></div>
+<div class="sidebar" id="sidebar">
+  <div class="sb-head">
+    <div class="logo"><div class="logo-mark">C</div><div class="logo-text">Menu</div></div>
+    <button class="sb-close" onclick="toggleSidebar(false)">✕</button>
+  </div>
+  <div class="sb-link" onclick="go('home')">🏠 Home</div>
+  <div class="sb-link" onclick="goLearning()">📚 Learning Portal</div>
+  <div class="sb-sep"></div>
+</div>
+
+<!-- ================= HOME: PUBLIC COURSE CATALOG + EMAIL SIGN-IN ================= -->
+<div id="page-home">
+
+  <!-- ---- Public course catalog (no login needed to browse) ---- -->
+  <div class="container wide" id="explore">
+    <div class="card">
+      <h2>Explore Courses</h2>
+      <div class="sub" style="margin-bottom:0;">Browse what's on CAO Open Learning — sign in to start watching.</div>
+      <div class="lp-chips" id="publicChips"></div>
+      <div class="video-grid" id="publicVideoGrid"></div>
+      <div class="empty-note hidden" id="publicEmpty"></div>
+    </div>
+  </div>
+
+  <div class="container" id="signin">
+    <div class="card">
+      <h1 style="margin-bottom:14px;">Sign in to CAO</h1>
+      <div id="googleBtnContainer" style="display:flex;justify-content:center;"></div>
+      <div style="display:flex;align-items:center;gap:10px;margin:18px 0;">
+        <div style="flex:1;height:1px;background:var(--line);"></div>
+        <span style="font-size:12px;color:var(--ink-soft);font-weight:600;">or</span>
+        <div style="flex:1;height:1px;background:var(--line);"></div>
+      </div>
+
+      <div class="vm-tabs">
+        <button class="btn small" id="authTabLogin" onclick="showAuthTab('login')">Login</button>
+        <button class="btn small secondary" id="authTabRegister" onclick="showAuthTab('register')">Create account</button>
+      </div>
+
+      <!-- ---- Returning students: username + password ---- -->
+      <div id="authPane-login">
+        <div class="sub">Login with the username and password you set when you registered.</div>
+        <form id="loginStudentForm">
+          <label>Username</label><input type="text" id="liUsername" required>
+          <label>Password</label><input type="password" id="liPassword" required>
+          <button type="submit" class="btn" id="loginStudentBtn">Login</button>
+          <div id="loginStudentStatus" class="msg"></div>
+        </form>
+      </div>
+
+      <!-- ---- First-time: set username + password, confirm email with OTP ---- -->
+      <div id="authPane-register" class="hidden">
+        <div class="sub">Pick a username and password — we'll email you a code to confirm it's really you.</div>
+
+        <form id="registerForm">
+          <label>Username</label><input type="text" id="reUsername" required>
+          <label>Email</label><input type="email" id="reEmail" required>
+          <label>Password</label><input type="password" id="rePassword" minlength="6" required>
+          <button type="submit" class="btn" id="registerBtn">Send verification code</button>
+          <div id="registerStatus" class="msg"></div>
+        </form>
+
+        <form id="verifyRegisterForm" class="hidden" style="margin-top:6px;">
+          <label>6-digit code</label>
+          <div class="otp-row"><input type="text" id="reOtp" maxlength="6" inputmode="numeric" pattern="[0-9]{6}" required></div>
+          <button type="submit" class="btn" id="verifyRegisterBtn">Verify & create account</button>
+          <div class="link"><a onclick="backToRegisterStep()">Start over</a></div>
+          <div id="verifyRegisterStatus" class="msg"></div>
+          <div class="sub" style="margin:12px 0 0;text-align:center;">Code not arriving? Check your <b>Spam</b> folder.</div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ================= PROFILE FORM ================= -->
+<div class="container hidden" id="page-profile">
+  <div class="card">
+    <div class="step-dots"><span></span><span class="active"></span><span></span></div>
+    <h1>Complete your profile</h1>
+    <div class="sub">One-time setup — this unlocks the Learning Portal.</div>
+    <form id="profileForm">
+      <div class="two-col">
+        <div><label>Name</label><input type="text" id="pUsername" required></div>
+        <div><label>Age</label><input type="number" id="pAge" min="1" max="120" required></div>
+      </div>
+      <label>College</label><input type="text" id="pCollege" required>
+      <div class="two-col">
+        <div><label>Place</label><input type="text" id="pPlace" required></div>
+        <div><label>District</label><input type="text" id="pDistrict" required></div>
+      </div>
+      <div class="two-col">
+        <div><label>State</label><input type="text" id="pState" required></div>
+        <div><label>Country</label><input type="text" id="pCountry" required></div>
+      </div>
+      <label>Address</label><textarea id="pAddress" rows="2" required></textarea>
+      <div class="two-col">
+        <div><label>Phone</label><input type="tel" id="pPhone" pattern="[0-9+ -]{7,15}" required></div>
+        <div><label>Passion</label><input type="text" id="pPassion" required></div>
+      </div>
+      <button type="submit" class="btn" id="profileBtn">Save & enter Learning Portal</button>
+      <div id="profileStatus" class="msg"></div>
+    </form>
+  </div>
+</div>
+
+<!-- ================= LEARNING PORTAL ================= -->
+<div class="container wide hidden" id="page-learning">
+  <div class="card">
+    <div class="lp-top">
+      <div><h2>Learning Portal</h2><div class="sub" id="learningWelcome" style="margin-bottom:0;">Free courses, curated and uploaded by the CAO team.</div></div>
+      <button class="btn small secondary" onclick="userLogout()">Logout</button>
+    </div>
+    <div class="lp-search"><input type="text" id="lpSearch" placeholder="Search videos..."></div>
+    <div class="lp-chips" id="lpChips"></div>
+    <div class="video-grid" id="videoGrid"></div>
+    <div class="empty-note hidden" id="lpEmpty"></div>
+  </div>
+</div>
+
+<!-- ================= ADMIN LOGIN ================= -->
+<div class="container hidden" id="page-admin-login">
+  <div class="card">
+    <h1>Admin login</h1>
+    <div class="sub">Only registered admins can access the panel.</div>
+    <form id="loginForm">
+      <label>Admin username</label><input type="text" id="aUser" required>
+      <label>Password</label><input type="password" id="aPass" required>
+      <button type="submit" class="btn" id="adminLoginBtn">Login</button>
+      <div id="loginStatus" class="msg"></div>
+    </form>
+    <div class="link"><a onclick="go('home')">⬅ Back to home</a></div>
+  </div>
+</div>
+
+<!-- ================= ADMIN PANEL ================= -->
+<div class="container wide hidden" id="page-admin-panel">
+  <div class="card">
+    <div class="toolbar">
+      <h1 style="margin:0;">Admin panel</h1>
+      <button class="btn small danger" onclick="adminLogout()">Logout</button>
+    </div>
+    <div class="sub" id="adminName"></div>
+
+    <div class="toolbar">
+      <button class="btn small" id="tabRegs" onclick="showAdminTab('regs')">Registrations</button>
+      <button class="btn small secondary" id="tabVideos" onclick="showAdminTab('videos')">Manage videos</button>
+    </div>
+
+    <div id="adminTab-regs">
+      <div class="toolbar"><button class="btn small danger" onclick="clearAllRegs()">Clear all</button></div>
+      <div id="panelStatus" class="msg"></div>
+      <div id="entriesWrap"></div>
+      <div id="detailView"></div>
+    </div>
+
+    <div id="adminTab-videos" class="hidden">
+      <div id="vmStatus" class="msg"></div>
+
+      <div class="vm-tabs">
+        <button class="btn small" id="vmTabYoutube" onclick="showVmTab('youtube')">YouTube link</button>
+        <button class="btn small secondary" id="vmTabUpload" onclick="showVmTab('upload')">Upload video file</button>
+      </div>
+
+      <form id="videoForm">
+        <label>Video title</label><input type="text" id="vTitle" required>
+        <label>Category</label>
+        <select id="vCategory" required>
+          <option value="Tech">Tech</option>
+          <option value="Design">Design</option>
+          <option value="Business">Business</option>
+          <option value="Cybersecurity">Cybersecurity</option>
+          <option value="Career">Career</option>
+          <option value="Other">Other</option>
+        </select>
+        <label>YouTube URL / ID</label>
+        <input type="text" id="vUrl" placeholder="https://youtube.com/watch?v=...">
+        <button type="submit" class="btn">Add video</button>
+      </form>
+
+      <form id="uploadForm" class="hidden">
+        <label>Video title</label><input type="text" id="uTitle" required>
+        <label>Category</label>
+        <select id="uCategory" required>
+          <option value="Tech">Tech</option>
+          <option value="Design">Design</option>
+          <option value="Business">Business</option>
+          <option value="Cybersecurity">Cybersecurity</option>
+          <option value="Career">Career</option>
+          <option value="Other">Other</option>
+        </select>
+        <label>Video file (max 45MB)</label>
+        <div class="filedrop" id="filedropLabel" onclick="document.getElementById('uFile').click()">Tap to choose a video file</div>
+        <input type="file" id="uFile" accept="video/*" class="hidden">
+        <button type="submit" class="btn gold" id="uploadBtn">Upload video</button>
+      </form>
+
+      <div id="videoListWrap" style="margin-top:20px;"></div>
+    </div>
+
+    <div class="link"><a onclick="go('home')">⬅ Back to home page</a></div>
+  </div>
+</div>
+
+<!-- ================= VIDEO MODAL ================= -->
+<div class="modal-back hidden" id="videoModal" onclick="if(event.target===this) closeModal()">
+  <div class="modal-box">
+    <div id="modalPlayerWrap"></div>
+    <div class="modal-body">
+      <div class="modal-top">
+        <div>
+          <div style="font-weight:800;font-size:16px;margin-bottom:6px;" id="modalTitle"></div>
+          <span class="video-cat" id="modalCat"></span>
+        </div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="modal-actions">
+        <button class="btn secondary auto" id="modalLikeBtn" onclick="toggleLike()">🤍 Like</button>
+        <button class="btn secondary auto" onclick="shareVideo()">🔗 Share</button>
+        <button class="btn auto" id="modalCompleteBtn" onclick="toggleComplete()">Mark as completed</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =====================================================================
+   CONFIG — only the backend URL + Google client ID live here. No secrets.
+   ===================================================================== */
+const API_BASE = "https://cao-open-learning.onrender.com/api";
+const GOOGLE_CLIENT_ID = "YOUR_GOOGLE_CLIENT_ID.apps.googleusercontent.com"; // <-- set this after creating your OAuth client
+/* ===================================================================== */
+
+let studentToken = sessionStorage.getItem("studentToken");
+let studentEmail = sessionStorage.getItem("studentEmail");
+let adminToken   = sessionStorage.getItem("adminToken");
+let adminUser    = sessionStorage.getItem("adminUser");
+let pendingEmail = "";
+let activeCategory = "All";
+let activeVideoId = null;
+let currentVideos = [];
+let pendingDeepLinkVideoId = new URLSearchParams(location.search).get("video");
+
+async function api(path, opts = {}, token) {
+  const res = await fetch(API_BASE + path, {
+    ...opts,
+    headers: { ...(opts.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
+      ...(token ? { Authorization: "Bearer " + token } : {}), ...(opts.headers || {}) }
+  });
+  let data = {};
+  try { data = await res.json(); } catch (e) {}
+  if (!res.ok) throw new Error(data.error || "Request failed");
+  return data;
+}
+function toast(text) {
+  const t = document.createElement("div");
+  t.className = "toast";
+  t.textContent = text;
+  document.body.appendChild(t);
+  setTimeout(() => t.remove(), 2500);
+}
+
+/* ---------- Sidebar / nav ---------- */
+function toggleSidebar(open) {
+  document.getElementById("sidebar").classList.toggle("open", open);
+  document.getElementById("backdrop").classList.toggle("open", open);
+}
+function hideAllPages() {
+  ["page-home","page-profile","page-learning","page-admin-login","page-admin-panel"]
+    .forEach(id => document.getElementById(id).classList.add("hidden"));
+}
+function go(target) {
+  toggleSidebar(false);
+  hideAllPages();
+  document.getElementById("page-home").classList.remove("hidden");
+}
+async function goLearning() {
+  toggleSidebar(false);
+  hideAllPages();
+  if (!studentToken) { document.getElementById("page-home").classList.remove("hidden"); return; }
+  try {
+    const profile = await api("/profile", {}, studentToken);
+    if (profile) {
+      document.getElementById("page-learning").classList.remove("hidden");
+      document.getElementById("learningWelcome").textContent = "Welcome back, " + profile.username + " 👋";
+      loadVideos();
+    } else {
+      document.getElementById("page-profile").classList.remove("hidden");
+    }
+  } catch (e) { userLogout(); }
+}
+function sidebarAdminClick() {
+  toggleSidebar(false);
+  hideAllPages();
+  if (adminToken) { openPanel(); } else { document.getElementById("page-admin-login").classList.remove("hidden"); }
+}
+function updateNavRight() {
+  document.getElementById("navRight").textContent = studentEmail ? ("👋 " + studentEmail) : "";
+}
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+}
+
+/* =====================================================================
+   GOOGLE SIGN-IN (one tap, no username/password/OTP needed)
+   ===================================================================== */
+function initGoogleButton() {
+  if (!window.google || !window.google.accounts || GOOGLE_CLIENT_ID.startsWith("YOUR_")) return;
+  google.accounts.id.initialize({ client_id: GOOGLE_CLIENT_ID, callback: handleGoogleCredential });
+  const container = document.getElementById("googleBtnContainer");
+  if (container) google.accounts.id.renderButton(container, { theme: "outline", size: "large", width: 280, text: "continue_with" });
+}
+async function handleGoogleCredential(response) {
+  try {
+    const data = await api("/auth/google", { method: "POST", body: JSON.stringify({ credential: response.credential }) });
+    studentToken = data.token; studentEmail = data.email;
+    sessionStorage.setItem("studentToken", studentToken);
+    sessionStorage.setItem("studentEmail", studentEmail);
+    updateNavRight();
+    goLearning();
+  } catch (err) {
+    toast(err.message);
+  }
+}
+window.addEventListener("load", initGoogleButton);
+
+/* =====================================================================
+   STEP 1: LOGIN (returning students) / REGISTER (first time)
+   ===================================================================== */
+function showAuthTab(tab) {
+  document.getElementById("authPane-login").classList.toggle("hidden", tab !== "login");
+  document.getElementById("authPane-register").classList.toggle("hidden", tab !== "register");
+  document.getElementById("authTabLogin").className = "btn small " + (tab === "login" ? "" : "secondary");
+  document.getElementById("authTabRegister").className = "btn small " + (tab === "register" ? "" : "secondary");
+}
+
+/* ---- Login: username + password ---- */
+document.getElementById("loginStudentForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const status = document.getElementById("loginStudentStatus");
+  const btn = document.getElementById("loginStudentBtn");
+  btn.disabled = true;
+  try {
+    const data = await api("/auth/login", { method: "POST", body: JSON.stringify({
+      username: document.getElementById("liUsername").value.trim(),
+      password: document.getElementById("liPassword").value
+    }) });
+    studentToken = data.token; studentEmail = data.email;
+    sessionStorage.setItem("studentToken", studentToken);
+    sessionStorage.setItem("studentEmail", studentEmail);
+    updateNavRight();
+    goLearning();
+  } catch (err) {
+    status.className = "msg err"; status.textContent = err.message;
+  } finally { btn.disabled = false; }
+});
+
+/* ---- Register: username + email + password, then confirm with emailed OTP ---- */
+document.getElementById("registerForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const status = document.getElementById("registerStatus");
+  const btn = document.getElementById("registerBtn");
+  btn.disabled = true;
+  status.className = "msg info"; status.textContent = "Sending code...";
+
+  const email = document.getElementById("reEmail").value.trim();
+  try {
+    const data = await api("/auth/register", { method: "POST", body: JSON.stringify({
+      username: document.getElementById("reUsername").value.trim(),
+      email,
+      password: document.getElementById("rePassword").value
+    }) });
+    pendingEmail = email;
+    status.className = "msg ok"; status.textContent = data.emailStatus;
+    document.getElementById("verifyRegisterForm").classList.remove("hidden");
+    document.getElementById("reOtp").focus();
+  } catch (err) {
+    status.className = "msg err"; status.textContent = err.message;
+  } finally { btn.disabled = false; }
+});
+
+document.getElementById("verifyRegisterForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const status = document.getElementById("verifyRegisterStatus");
+  const btn = document.getElementById("verifyRegisterBtn");
+  btn.disabled = true;
+  try {
+    const data = await api("/auth/verify-register", { method: "POST",
+      body: JSON.stringify({ email: pendingEmail, otp: document.getElementById("reOtp").value.trim() }) });
+    studentToken = data.token; studentEmail = data.email;
+    sessionStorage.setItem("studentToken", studentToken);
+    sessionStorage.setItem("studentEmail", studentEmail);
+    updateNavRight();
+    goLearning();
+  } catch (err) {
+    status.className = "msg err"; status.textContent = err.message;
+  } finally { btn.disabled = false; }
+});
+function backToRegisterStep() {
+  document.getElementById("verifyRegisterForm").classList.add("hidden");
+  document.getElementById("registerStatus").className = "msg";
+  document.getElementById("registerForm").reset();
+  document.getElementById("verifyRegisterForm").reset();
+}
+
+/* =====================================================================
+   STEP 2: PROFILE FORM
+   ===================================================================== */
+document.getElementById("profileForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const status = document.getElementById("profileStatus");
+  const btn = document.getElementById("profileBtn");
+  btn.disabled = true;
+  status.className = "msg info"; status.textContent = "Saving profile...";
+  const body = {
+    username: document.getElementById("pUsername").value.trim(),
+    age: document.getElementById("pAge").value.trim(),
+    college: document.getElementById("pCollege").value.trim(),
+    place: document.getElementById("pPlace").value.trim(),
+    district: document.getElementById("pDistrict").value.trim(),
+    state: document.getElementById("pState").value.trim(),
+    country: document.getElementById("pCountry").value.trim(),
+    address: document.getElementById("pAddress").value.trim(),
+    phone: document.getElementById("pPhone").value.trim(),
+    passion: document.getElementById("pPassion").value.trim()
+  };
+  try {
+    await api("/profile", { method: "POST", body: JSON.stringify(body) }, studentToken);
+    status.className = "msg ok"; status.textContent = "Profile saved!";
+    setTimeout(() => goLearning(), 300);
+  } catch (err) {
+    status.className = "msg err"; status.textContent = err.message;
+  } finally { btn.disabled = false; }
+});
+function userLogout() {
+  studentToken = null; studentEmail = null;
+  sessionStorage.removeItem("studentToken"); sessionStorage.removeItem("studentEmail");
+  updateNavRight(); go("home");
+}
+
+/* =====================================================================
+   ADMIN LOGIN
+   ===================================================================== */
+document.getElementById("loginForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const status = document.getElementById("loginStatus");
+  const btn = document.getElementById("adminLoginBtn");
+  btn.disabled = true;
+  try {
+    const data = await api("/admin/login", { method: "POST",
+      body: JSON.stringify({ username: document.getElementById("aUser").value.trim(), password: document.getElementById("aPass").value }) });
+    adminToken = data.token; adminUser = data.username;
+    sessionStorage.setItem("adminToken", adminToken);
+    sessionStorage.setItem("adminUser", adminUser);
+    openPanel();
+  } catch (err) {
+    status.className = "msg err"; status.textContent = err.message;
+  } finally { btn.disabled = false; }
+});
+function adminLogout() {
+  adminToken = null; adminUser = null;
+  sessionStorage.removeItem("adminToken"); sessionStorage.removeItem("adminUser");
+  go("home");
+}
+function openPanel() {
+  hideAllPages();
+  document.getElementById("page-admin-panel").classList.remove("hidden");
+  document.getElementById("adminName").textContent = "Logged in as: " + adminUser;
+  showAdminTab("regs");
+  loadRegistrations();
+}
+function showAdminTab(tab) {
+  document.getElementById("adminTab-regs").classList.toggle("hidden", tab !== "regs");
+  document.getElementById("adminTab-videos").classList.toggle("hidden", tab !== "videos");
+  document.getElementById("tabRegs").className = "btn small " + (tab === "regs" ? "" : "secondary");
+  document.getElementById("tabVideos").className = "btn small " + (tab === "videos" ? "" : "secondary");
+  if (tab === "videos") { showVmTab("youtube"); loadVideoManagerList(); }
+}
+function showVmTab(tab) {
+  document.getElementById("videoForm").classList.toggle("hidden", tab !== "youtube");
+  document.getElementById("uploadForm").classList.toggle("hidden", tab !== "upload");
+  document.getElementById("vmTabYoutube").className = "btn small " + (tab === "youtube" ? "" : "secondary");
+  document.getElementById("vmTabUpload").className = "btn small " + (tab === "upload" ? "" : "secondary");
+}
+
+/* ---------- Admin: registrations ---------- */
+async function loadRegistrations() {
+  try { renderEntries(await api("/admin/registrations", {}, adminToken)); }
+  catch (err) { flash(err.message, "err"); }
+}
+function renderEntries(list) {
+  const wrap = document.getElementById("entriesWrap");
+  document.getElementById("detailView").innerHTML = "";
+  if (!list.length) { wrap.innerHTML = '<p style="color:var(--ink-soft);margin-top:12px;">No profiles yet.</p>'; return; }
+  let html = `<table><tr><th>#</th><th>Name</th><th>Email</th><th>Phone</th><th>College</th><th>Actions</th></tr>`;
+  list.forEach((d, i) => {
+    html += `<tr>
+      <td>${i+1}</td><td>${esc(d.username)}</td><td>${esc(d.email)}</td><td>${esc(d.phone)}</td><td>${esc(d.college)}</td>
+      <td>
+        <button class="btn small" onclick='viewEntry(${JSON.stringify(d)})'>View</button>
+        <button class="btn small" onclick="resendEntry('${d._id}')">TG</button>
+        <button class="btn small danger" onclick="deleteEntry('${d._id}')">Del</button>
+      </td></tr>`;
+  });
+  wrap.innerHTML = html + `</table>`;
+}
+function viewEntry(d) {
+  document.getElementById("detailView").innerHTML = `
+    <div class="detail-box">
+      <b>Name:</b> ${esc(d.username)}<br><b>Email:</b> ${esc(d.email)}<br><b>Age:</b> ${esc(d.age)}<br>
+      <b>College:</b> ${esc(d.college)}<br><b>Place:</b> ${esc(d.place)}<br><b>District:</b> ${esc(d.district)}<br>
+      <b>State:</b> ${esc(d.state)}<br><b>Country:</b> ${esc(d.country)}<br><b>Address:</b> ${esc(d.address)}<br>
+      <b>Phone:</b> ${esc(d.phone)}<br><b>Passion:</b> ${esc(d.passion)}
+    </div>`;
+}
+async function resendEntry(id) {
+  try { const data = await api(`/admin/registrations/${id}/resend`, { method: "POST" }, adminToken); flash(data.results.join(" | "), "ok"); }
+  catch (err) { flash(err.message, "err"); }
+}
+async function deleteEntry(id) {
+  if (!confirm("Delete this profile? This also removes their sign-in.")) return;
+  try { await api(`/admin/registrations/${id}`, { method: "DELETE" }, adminToken); loadRegistrations(); }
+  catch (err) { flash(err.message, "err"); }
+}
+async function clearAllRegs() {
+  if (!confirm("Delete ALL profiles and student sign-ins?")) return;
+  try { await api("/admin/registrations", { method: "DELETE" }, adminToken); loadRegistrations(); }
+  catch (err) { flash(err.message, "err"); }
+}
+function flash(text, type) { const s = document.getElementById("panelStatus"); s.className = "msg " + type; s.textContent = text; }
+function vmFlash(text, type) { const s = document.getElementById("vmStatus"); s.className = "msg " + type; s.textContent = text; }
+
+/* =====================================================================
+   STEP 3 & 4: LEARNING PORTAL + VIDEOS
+   ===================================================================== */
+async function loadVideos() {
+  try {
+    currentVideos = await api("/videos", {}, studentToken);
+    renderChips(); renderVideoGrid();
+    if (pendingDeepLinkVideoId) { openModal(pendingDeepLinkVideoId); pendingDeepLinkVideoId = null; }
+  } catch (err) {
+    document.getElementById("videoGrid").innerHTML = "";
+    const empty = document.getElementById("lpEmpty");
+    empty.classList.remove("hidden"); empty.textContent = err.message;
+  }
+}
+
+/* ---------- Public catalog on the Home page (no login needed to browse) ---------- */
+let publicVideos = [];
+let activePublicCategory = "All";
+
+async function loadPublicVideos() {
+  try {
+    publicVideos = await api("/videos/public", {});
+    renderPublicChips();
+    renderPublicVideoGrid();
+  } catch (err) {
+    document.getElementById("publicVideoGrid").innerHTML = "";
+    const empty = document.getElementById("publicEmpty");
+    empty.classList.remove("hidden"); empty.textContent = "Couldn't load courses right now.";
+  }
+}
+function renderPublicChips() {
+  const cats = ["All", ...new Set(publicVideos.map(v => v.category))];
+  document.getElementById("publicChips").innerHTML = cats.map(c =>
+    `<div class="chip ${c === activePublicCategory ? "active" : ""}" onclick="setPublicCategory('${esc(c)}')">${esc(c)}</div>`).join("");
+}
+function setPublicCategory(c) { activePublicCategory = c; renderPublicChips(); renderPublicVideoGrid(); }
+
+function renderPublicVideoGrid() {
+  const filtered = activePublicCategory === "All" ? publicVideos : publicVideos.filter(v => v.category === activePublicCategory);
+  const grid = document.getElementById("publicVideoGrid");
+  const empty = document.getElementById("publicEmpty");
+
+  if (!filtered.length) {
+    grid.innerHTML = "";
+    empty.classList.remove("hidden");
+    empty.textContent = "No courses posted yet. Check back soon.";
+    return;
+  }
+  empty.classList.add("hidden");
+
+  grid.innerHTML = filtered.map(v => `
+    <div class="video-card">
+      <div class="video-thumb-wrap" onclick='goToCourse(${JSON.stringify(v._id)})'>
+        <div class="source-tag">${v.source === "youtube" ? "YouTube" : "Uploaded"}</div>
+        ${thumbHtml(v)}
+      </div>
+      <div class="video-info">
+        <div class="video-title" onclick='goToCourse(${JSON.stringify(v._id)})' style="cursor:pointer;">${esc(v.title)}</div>
+        <div class="video-meta-row">
+          <span class="video-cat">${esc(v.category)}</span>
+          <span class="icon-btn">🤍 ${v.likeCount}</span>
+        </div>
+      </div>
+    </div>
+  `).join("");
+}
+
+/* Clicking a course on the public catalog: signed in students jump straight to it,
+   everyone else is sent to sign-in and lands on the same video right after. */
+function goToCourse(id) {
+  pendingDeepLinkVideoId = id;
+  if (studentToken) {
+    goLearning();
+  } else {
+    go("home");
+    document.getElementById("signin").scrollIntoView({ behavior: "smooth" });
+    setTimeout(() => document.getElementById("liUsername").focus(), 400);
+  }
+}
+
+function renderChips() {
+  const cats = ["All", ...new Set(currentVideos.map(v => v.category))];
+  document.getElementById("lpChips").innerHTML = cats.map(c =>
+    `<div class="chip ${c === activeCategory ? "active" : ""}" onclick="setCategory('${esc(c)}')">${esc(c)}</div>`).join("");
+}
+function setCategory(c) { activeCategory = c; renderChips(); renderVideoGrid(); }
+
+function thumbHtml(v) {
+  if (v.source === "youtube") {
+    return `<img class="video-thumb" src="https://img.youtube.com/vi/${v.youtubeId}/hqdefault.jpg" alt="${esc(v.title)}" loading="lazy">`;
+  }
+  if (v.hasThumbnail) {
+    const thumbUrl = `${API_BASE}/videos/${v._id}/thumbnail`;
+    return `<img class="video-thumb" src="${thumbUrl}" alt="${esc(v.title)}" loading="lazy"
+      onerror="this.outerHTML='&lt;div class=&quot;video-thumb placeholder&quot;&gt;🎬&lt;/div&gt;'">`;
+  }
+  return `<div class="video-thumb placeholder">🎬</div>`;
+}
+
+function renderVideoGrid() {
+  const q = (document.getElementById("lpSearch").value || "").toLowerCase();
+  const filtered = currentVideos.filter(v => (activeCategory === "All" || v.category === activeCategory) && v.title.toLowerCase().includes(q));
+  const grid = document.getElementById("videoGrid");
+  const empty = document.getElementById("lpEmpty");
+
+  if (!filtered.length) {
+    grid.innerHTML = "";
+    empty.classList.remove("hidden");
+    empty.textContent = currentVideos.length ? "No videos match your search." : "No videos yet. Check back soon.";
+    return;
+  }
+  empty.classList.add("hidden");
+
+  grid.innerHTML = filtered.map(v => `
+    <div class="video-card">
+      <div class="video-thumb-wrap" onclick='openModal(${JSON.stringify(v._id)})'>
+        ${v.completed ? '<div class="done-tag">Completed</div>' : ''}
+        <div class="source-tag">${v.source === "youtube" ? "YouTube" : "Uploaded"}</div>
+        ${thumbHtml(v)}
+      </div>
+      <div class="video-info">
+        <div class="video-title" onclick='openModal(${JSON.stringify(v._id)})' style="cursor:pointer;">${esc(v.title)}</div>
+        <div class="video-meta-row">
+          <span class="video-cat">${esc(v.category)}</span>
+          <div class="video-actions">
+            <button class="icon-btn ${v.liked ? 'liked' : ''}" onclick='quickLike(event, ${JSON.stringify(v._id)})'>${v.liked ? '❤️' : '🤍'} ${v.likeCount}</button>
+            <button class="icon-btn" onclick='quickShare(event, ${JSON.stringify(v._id)}, ${JSON.stringify(v.title)})'>🔗</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join("");
+}
+document.getElementById("lpSearch").addEventListener("input", renderVideoGrid);
+
+function buildShareUrl(id) {
+  const url = new URL(location.href);
+  url.search = "?video=" + id;
+  return url.toString();
+}
+async function quickShare(e, id, title) {
+  e.stopPropagation();
+  const url = buildShareUrl(id);
+  if (navigator.share) {
+    try { await navigator.share({ title: "CAO Open Learning: " + title, url }); } catch (err) {}
+  } else {
+    await navigator.clipboard.writeText(url);
+    toast("Link copied to clipboard");
+  }
+}
+async function quickLike(e, id) {
+  e.stopPropagation();
+  try {
+    const data = await api(`/videos/${id}/like`, { method: "POST" }, studentToken);
+    const v = currentVideos.find(x => x._id === id);
+    if (v) { v.liked = data.liked; v.likeCount = data.likeCount; }
+    renderVideoGrid();
+  } catch (err) { toast(err.message); }
+}
+
+function openModal(id) {
+  const v = currentVideos.find(x => x._id === id);
+  if (!v) return;
+  activeVideoId = id;
+  const playerWrap = document.getElementById("modalPlayerWrap");
+  if (v.source === "youtube") {
+    playerWrap.innerHTML = `<iframe class="modal-video" src="https://www.youtube.com/embed/${v.youtubeId}?autoplay=1"
+      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
+  } else {
+    playerWrap.innerHTML = `<video class="modal-video" controls autoplay src="${API_BASE}/videos/${id}/stream?token=${encodeURIComponent(studentToken)}"></video>`;
+  }
+  document.getElementById("modalTitle").textContent = v.title;
+  document.getElementById("modalCat").textContent = v.category;
+  updateCompleteBtn(v.completed);
+  updateLikeBtn(v.liked, v.likeCount);
+  document.getElementById("videoModal").classList.remove("hidden");
+}
+function closeModal() {
+  document.getElementById("videoModal").classList.add("hidden");
+  document.getElementById("modalPlayerWrap").innerHTML = "";
+  activeVideoId = null;
+}
+function updateCompleteBtn(completed) {
+  const btn = document.getElementById("modalCompleteBtn");
+  btn.textContent = completed ? "Completed — click to undo" : "Mark as completed";
+  btn.className = "btn auto" + (completed ? " secondary" : "");
+}
+function updateLikeBtn(liked, count) {
+  const btn = document.getElementById("modalLikeBtn");
+  btn.textContent = (liked ? "❤️ Liked" : "🤍 Like") + " (" + count + ")";
+}
+async function toggleComplete() {
+  try {
+    const data = await api(`/videos/${activeVideoId}/complete`, { method: "POST" }, studentToken);
+    const v = currentVideos.find(x => x._id === activeVideoId);
+    if (v) v.completed = data.completed;
+    updateCompleteBtn(data.completed);
+    renderVideoGrid();
+  } catch (err) { toast(err.message); }
+}
+async function toggleLike() {
+  try {
+    const data = await api(`/videos/${activeVideoId}/like`, { method: "POST" }, studentToken);
+    const v = currentVideos.find(x => x._id === activeVideoId);
+    if (v) { v.liked = data.liked; v.likeCount = data.likeCount; }
+    updateLikeBtn(data.liked, data.likeCount);
+    renderVideoGrid();
+  } catch (err) { toast(err.message); }
+}
+async function shareVideo() {
+  const v = currentVideos.find(x => x._id === activeVideoId);
+  if (!v) return;
+  await quickShare({ stopPropagation(){} }, activeVideoId, v.title);
+}
+
+/* =====================================================================
+   ADMIN: MANAGE VIDEOS (YouTube link + real file upload)
+   ===================================================================== */
+document.getElementById("videoForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const title = document.getElementById("vTitle").value.trim();
+  const category = document.getElementById("vCategory").value;
+  const url = document.getElementById("vUrl").value.trim();
+  try {
+    await api("/videos", { method: "POST", body: JSON.stringify({ title, category, url }) }, adminToken);
+    vmFlash("Video added to Learning Portal!", "ok");
+    this.reset();
+    loadVideoManagerList();
+  } catch (err) { vmFlash(err.message, "err"); }
+});
+
+document.getElementById("uFile").addEventListener("change", function() {
+  const label = document.getElementById("filedropLabel");
+  if (this.files[0]) {
+    label.textContent = this.files[0].name + " (" + (this.files[0].size / 1024 / 1024).toFixed(1) + "MB)";
+    label.classList.add("has-file");
+  } else {
+    label.textContent = "Tap to choose a video file";
+    label.classList.remove("has-file");
+  }
+});
+
+document.getElementById("uploadForm").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  const title = document.getElementById("uTitle").value.trim();
+  const category = document.getElementById("uCategory").value;
+  const file = document.getElementById("uFile").files[0];
+  if (!file) { vmFlash("Choose a video file first.", "err"); return; }
+
+  const btn = document.getElementById("uploadBtn");
+  btn.disabled = true;
+  vmFlash("Uploading... this can take a minute for larger files.", "info");
+
+  const form = new FormData();
+  form.append("title", title);
+  form.append("category", category);
+  form.append("file", file);
+
+  try {
+    await api("/videos/upload", { method: "POST", body: form }, adminToken);
+    vmFlash("Video uploaded to the Learning Portal!", "ok");
+    this.reset();
+    document.getElementById("filedropLabel").textContent = "Tap to choose a video file";
+    document.getElementById("filedropLabel").classList.remove("has-file");
+    loadVideoManagerList();
+  } catch (err) {
+    vmFlash(err.message, "err");
+  } finally { btn.disabled = false; }
+});
+
+async function loadVideoManagerList() {
+  try { renderVideoManagerList(await api("/videos", {}, adminToken)); }
+  catch (err) { vmFlash(err.message, "err"); }
+}
+function renderVideoManagerList(videos) {
+  const wrap = document.getElementById("videoListWrap");
+  if (!videos.length) { wrap.innerHTML = '<p style="color:var(--ink-soft);">No videos posted yet.</p>'; return; }
+  wrap.innerHTML = videos.map(v => `
+    <div class="vm-row">
+      <div>
+        <div class="t">${esc(v.title)}</div>
+        <span class="c">${esc(v.category)} • ${v.source === "youtube" ? "YouTube" : "Uploaded"} • ${v.likeCount} likes • added by ${esc(v.addedBy)}</span>
+      </div>
+      <button class="btn small danger" onclick="deleteVideo('${v._id}')">Delete</button>
+    </div>
+  `).join("");
+}
+async function deleteVideo(id) {
+  if (!confirm("Remove this video?")) return;
+  try { await api(`/videos/${id}`, { method: "DELETE" }, adminToken); loadVideoManagerList(); }
+  catch (err) { vmFlash(err.message, "err"); }
+}
+
+/* =====================================================================
+   ADMIN ACCESS — intentionally hidden from the sidebar/nav.
+   Reachable two ways: visiting ?admin=1, or tapping the logo 5 times fast.
+   ===================================================================== */
+let logoTapCount = 0;
+let logoTapTimer = null;
+function handleLogoTap() {
+  logoTapCount++;
+  clearTimeout(logoTapTimer);
+  logoTapTimer = setTimeout(() => { logoTapCount = 0; }, 1500);
+  if (logoTapCount >= 5) {
+    logoTapCount = 0;
+    sidebarAdminClick();
+  }
+}
+
+/* ---------- Init ---------- */
+updateNavRight();
+loadPublicVideos();
+if (new URLSearchParams(location.search).get("admin") === "1") {
+  sidebarAdminClick();
+} else if (studentToken) {
+  goLearning();
+}
+</script>
+</body>
+</html>
