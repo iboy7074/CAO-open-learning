@@ -30,7 +30,7 @@ app.use("/api/profile", profileRoutes); // /api/profile
 // Friendly JSON error for oversized video uploads (multer) instead of a raw stack trace
 app.use((err, req, res, next) => {
   if (err && err.code === "LIMIT_FILE_SIZE") {
-    return res.status(413).json({ error: "Video is too large. Max 45MB." });
+    return res.status(413).json({ error: "Video is too large. Max 19MB (Telegram's download limit for bots)." });
   }
   if (err) {
     console.error(err);
