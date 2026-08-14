@@ -4,16 +4,17 @@ const Video = require("../models/Video");
 const Completion = require("../models/Completion");
 const { verifyToken } = require("../middleware/auth");
 const { uploadVideoToTelegram, resolveTelegramFileUrl } = require("../telegramStorage");
+const { getUploadUrl, getDownloadUrl, deleteObject } = require("../r2Storage");
 
 const router = express.Router();
 
+// Legacy path only - small clips still uploaded the old way stay playable.
 const upload = multer({
   storage: multer.memoryStorage(),
-  // Telegram's Bot API allows uploading files up to 50MB via multipart, but
-  // can only DOWNLOAD (getFile) files up to 20MB back out for regular bots.
-  // We need both directions, so the real ceiling is 20MB, not 50MB.
-  limits: { fileSize: 19 * 1024 * 1024 } // 19MB, safely under Telegram's 20MB download cap
+  limits: { fileSize: 19 * 1024 * 1024 } // 19MB, safely under Telegram's 20MB bot download cap
 });
+
+const MAX_R2_UPLOAD_BYTES = 1024 * 1024 * 1024; // 1GB
 
 function extractYouTubeId(input) {
   input = (input || "").trim();
@@ -40,12 +41,13 @@ function shapeVideo(v, viewerEmail) {
     source: obj.source,
     youtubeId: obj.youtubeId,
     hasThumbnail: obj.source === "telegram" ? !!obj.telegramThumbFileId : false,
+    fileSizeBytes: obj.fileSizeBytes,
     addedBy: obj.addedBy,
     createdAt: obj.createdAt,
     likeCount: (obj.likes || []).length,
     liked: viewerEmail ? (obj.likes || []).includes(viewerEmail) : false
-    // telegramFileId / telegramThumbFileId intentionally never sent to the client -
-    // the stream/thumbnail routes handle those server-side
+    // telegramFileId / telegramThumbFileId / r2Key intentionally never sent to the client -
+    // the stream/thumbnail/play routes handle those server-side
   };
 }
 
@@ -66,6 +68,65 @@ router.get("/", verifyToken(), async (req, res) => {
   res.json(videos.map(v => shapeVideo(v, null)));
 });
 
+/* =====================================================================
+   REAL FILE UPLOADS (up to 1GB) via Cloudflare R2 - direct browser-to-bucket
+   ===================================================================== */
+
+/* ---------- POST /api/videos/upload-url ---------- (admin only, step 1: get a presigned PUT URL) */
+router.post("/upload-url", verifyToken("admin"), async (req, res) => {
+  try {
+    const { filename, contentType, fileSizeBytes } = req.body;
+    if (!filename || !contentType) return res.status(400).json({ error: "filename and contentType are required." });
+    if (!contentType.startsWith("video/")) return res.status(400).json({ error: "Only video files are allowed." });
+    if (fileSizeBytes && fileSizeBytes > MAX_R2_UPLOAD_BYTES) {
+      return res.status(413).json({ error: "Video is too large. Max 1GB." });
+    }
+
+    const safeName = String(filename).replace(/[^a-zA-Z0-9_.-]/g, "_");
+    const key = `videos/${Date.now()}-${safeName}`;
+    const uploadUrl = await getUploadUrl(key, contentType);
+    res.json({ uploadUrl, key });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message || "Could not prepare upload." });
+  }
+});
+
+/* ---------- POST /api/videos/confirm-upload ---------- (admin only, step 3: save metadata after the direct upload finished) */
+router.post("/confirm-upload", verifyToken("admin"), async (req, res) => {
+  try {
+    const { title, category, key, fileSizeBytes } = req.body;
+    if (!title || !category || !key) return res.status(400).json({ error: "title, category, and key are required." });
+
+    const video = await Video.create({
+      title, category, source: "r2", r2Key: key, fileSizeBytes, addedBy: req.user.username
+    });
+    res.status(201).json(shapeVideo(video, null));
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: "Could not save video." });
+  }
+});
+
+/* ---------- GET /api/videos/:id/play ---------- (student only, R2-hosted videos: get a temporary direct stream URL) */
+router.get("/:id/play", verifyToken("student"), async (req, res) => {
+  try {
+    const video = await Video.findById(req.params.id);
+    if (!video || video.source !== "r2" || !video.r2Key) {
+      return res.status(404).json({ error: "Video not found." });
+    }
+    const url = await getDownloadUrl(video.r2Key);
+    res.json({ url });
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message || "Could not load video." });
+  }
+});
+
+/* =====================================================================
+   LEGACY: small clips uploaded via the old Telegram-storage path (<19MB)
+   ===================================================================== */
+
 /* ---------- GET /api/videos/:id/stream ---------- (student only, Telegram-hosted videos) */
 router.get("/:id/stream", verifyToken("student"), async (req, res) => {
   try {
@@ -78,13 +139,10 @@ router.get("/:id/stream", verifyToken("student"), async (req, res) => {
     try {
       fileUrl = await resolveTelegramFileUrl(video.telegramFileId);
     } catch (e) {
-      // Most common cause: this video was uploaded larger than Telegram's 20MB
-      // download cap for bots, so it can never be streamed back - flag it clearly.
       console.error("resolveTelegramFileUrl failed:", e.message);
-      return res.status(502).json({ error: "This video can't be streamed (likely too large for Telegram's bot download limit). Please re-upload it under 19MB." });
+      return res.status(502).json({ error: "This video can't be streamed (likely too large for Telegram's bot download limit)." });
     }
 
-    // Proxy the bytes through our server (with Range support so seeking/scrubbing works)
     const range = req.headers.range;
     const upstream = await fetch(fileUrl, range ? { headers: { Range: range } } : {});
 
@@ -113,7 +171,7 @@ router.get("/:id/stream", verifyToken("student"), async (req, res) => {
   }
 });
 
-/* ---------- GET /api/videos/:id/thumbnail ---------- (public - just a preview frame, not the full video) */
+/* ---------- GET /api/videos/:id/thumbnail ---------- (public - just a preview frame, Telegram uploads only) */
 router.get("/:id/thumbnail", async (req, res) => {
   try {
     const video = await Video.findById(req.params.id);
@@ -130,6 +188,32 @@ router.get("/:id/thumbnail", async (req, res) => {
     res.status(404).end();
   }
 });
+
+/* ---------- POST /api/videos/upload ---------- (admin only, legacy small-clip path -> Telegram) */
+router.post("/upload", verifyToken("admin"), upload.single("file"), async (req, res) => {
+  try {
+    const { title, category } = req.body;
+    if (!title || !category || !req.file) {
+      return res.status(400).json({ error: "Title, category, and a video file are required." });
+    }
+    if (!req.file.mimetype.startsWith("video/")) {
+      return res.status(400).json({ error: "Only video files are allowed." });
+    }
+
+    const { fileId, thumbFileId } = await uploadVideoToTelegram(req.file.buffer, req.file.originalname, req.file.mimetype);
+    const video = await Video.create({
+      title, category, source: "telegram", telegramFileId: fileId, telegramThumbFileId: thumbFileId, addedBy: req.user.username
+    });
+    res.status(201).json(shapeVideo(video, null));
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ error: e.message || "Upload failed." });
+  }
+});
+
+/* =====================================================================
+   SHARED
+   ===================================================================== */
 
 /* ---------- POST /api/videos/:id/complete ---------- (toggle) */
 router.post("/:id/complete", verifyToken("student"), async (req, res) => {
@@ -169,30 +253,12 @@ router.post("/", verifyToken("admin"), async (req, res) => {
   res.status(201).json(shapeVideo(video, null));
 });
 
-/* ---------- POST /api/videos/upload ---------- (admin only, real video file -> Telegram storage) */
-router.post("/upload", verifyToken("admin"), upload.single("file"), async (req, res) => {
-  try {
-    const { title, category } = req.body;
-    if (!title || !category || !req.file) {
-      return res.status(400).json({ error: "Title, category, and a video file are required." });
-    }
-    if (!req.file.mimetype.startsWith("video/")) {
-      return res.status(400).json({ error: "Only video files are allowed." });
-    }
-
-    const { fileId, thumbFileId } = await uploadVideoToTelegram(req.file.buffer, req.file.originalname, req.file.mimetype);
-    const video = await Video.create({
-      title, category, source: "telegram", telegramFileId: fileId, telegramThumbFileId: thumbFileId, addedBy: req.user.username
-    });
-    res.status(201).json(shapeVideo(video, null));
-  } catch (e) {
-    console.error(e);
-    res.status(500).json({ error: e.message || "Upload failed." });
-  }
-});
-
 /* ---------- DELETE /api/videos/:id ---------- (admin only) */
 router.delete("/:id", verifyToken("admin"), async (req, res) => {
+  const video = await Video.findById(req.params.id);
+  if (video && video.source === "r2" && video.r2Key) {
+    try { await deleteObject(video.r2Key); } catch (e) { console.error("R2 delete failed:", e.message); }
+  }
   await Video.findByIdAndDelete(req.params.id);
   await Completion.deleteMany({ videoId: req.params.id });
   res.json({ message: "Deleted." });
