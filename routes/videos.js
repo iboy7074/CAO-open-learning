@@ -9,7 +9,10 @@ const router = express.Router();
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 45 * 1024 * 1024 } // 45MB - stays under Telegram's 50MB bot upload limit
+  // Telegram's Bot API allows uploading files up to 50MB via multipart, but
+  // can only DOWNLOAD (getFile) files up to 20MB back out for regular bots.
+  // We need both directions, so the real ceiling is 20MB, not 50MB.
+  limits: { fileSize: 19 * 1024 * 1024 } // 19MB, safely under Telegram's 20MB download cap
 });
 
 function extractYouTubeId(input) {
@@ -70,11 +73,24 @@ router.get("/:id/stream", verifyToken("student"), async (req, res) => {
     if (!video || video.source !== "telegram" || !video.telegramFileId) {
       return res.status(404).json({ error: "Video not found." });
     }
-    const fileUrl = await resolveTelegramFileUrl(video.telegramFileId);
+
+    let fileUrl;
+    try {
+      fileUrl = await resolveTelegramFileUrl(video.telegramFileId);
+    } catch (e) {
+      // Most common cause: this video was uploaded larger than Telegram's 20MB
+      // download cap for bots, so it can never be streamed back - flag it clearly.
+      console.error("resolveTelegramFileUrl failed:", e.message);
+      return res.status(502).json({ error: "This video can't be streamed (likely too large for Telegram's bot download limit). Please re-upload it under 19MB." });
+    }
 
     // Proxy the bytes through our server (with Range support so seeking/scrubbing works)
     const range = req.headers.range;
     const upstream = await fetch(fileUrl, range ? { headers: { Range: range } } : {});
+
+    if (!upstream.ok && upstream.status !== 206) {
+      return res.status(502).json({ error: "Telegram couldn't serve this file (status " + upstream.status + ")." });
+    }
 
     res.status(upstream.status);
     upstream.headers.forEach((value, key) => {
