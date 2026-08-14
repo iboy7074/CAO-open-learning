@@ -342,7 +342,7 @@
           <option value="Career">Career</option>
           <option value="Other">Other</option>
         </select>
-        <label>Video file (max 45MB)</label>
+        <label>Video file (max 19MB)</label>
         <div class="filedrop" id="filedropLabel" onclick="document.getElementById('uFile').click()">Tap to choose a video file</div>
         <input type="file" id="uFile" accept="video/*" class="hidden">
         <button type="submit" class="btn gold" id="uploadBtn">Upload video</button>
@@ -852,7 +852,17 @@ function openModal(id) {
     playerWrap.innerHTML = `<iframe class="modal-video" src="https://www.youtube.com/embed/${v.youtubeId}?autoplay=1"
       allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>`;
   } else {
-    playerWrap.innerHTML = `<video class="modal-video" controls autoplay src="${API_BASE}/videos/${id}/stream?token=${encodeURIComponent(studentToken)}"></video>`;
+    const streamUrl = `${API_BASE}/videos/${id}/stream?token=${encodeURIComponent(studentToken)}`;
+    playerWrap.innerHTML = `<video class="modal-video" controls autoplay src="${streamUrl}"></video>`;
+    // Real video errors (e.g. file too large for Telegram to serve back) fail silently in <video>,
+    // so fetch the same URL separately just to surface a readable error message if it 404s/502s.
+    fetch(streamUrl, { method: "HEAD" }).then(async r => {
+      if (!r.ok) {
+        let msg = "This video can't be played right now.";
+        try { msg = (await (await fetch(streamUrl)).json()).error || msg; } catch (e) {}
+        playerWrap.innerHTML = `<div style="aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;background:#111;color:#fff;padding:24px;text-align:center;font-size:14px;">${esc(msg)}</div>`;
+      }
+    }).catch(() => {});
   }
   document.getElementById("modalTitle").textContent = v.title;
   document.getElementById("modalCat").textContent = v.category;
